@@ -1,0 +1,70 @@
+.options-shell {
+  min-height: 100vh;
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+  background: #f6f8fc;
+}
+
+.options-card {
+  padding: 20px;
+}
+
+.options-card h2,
+.options-card h3 {
+  margin: 0 0 10px;
+}
+
+.options-card p,
+.options-card li {
+  color: #61708d;
+}
+
+.options-card ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.options-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.options-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.options-button {
+  border: 1px solid #d9e0ec;
+  background: #fff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #33415c;
+}
+
+.options-button.is-primary {
+  background: #4357ff;
+  border-color: #4357ff;
+  color: #fff;
+}
+
+.options-button.is-danger {
+  color: #b42318;
+  border-color: #f3c8c5;
+  background: #fff7f6;
+}
+
+.options-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.options-help {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #75829d;
+}

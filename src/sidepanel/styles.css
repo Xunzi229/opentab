@@ -249,6 +249,18 @@
   margin-bottom: 12px;
 }
 
+.manual-route-panel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid #e7ebf3;
+  border-radius: 8px;
+  background: #f9fbff;
+}
+
 .route-list {
   display: grid;
   gap: 10px;

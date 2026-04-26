@@ -59,11 +59,18 @@ export function GroupSection({
   onAddRoute
 }: GroupSectionProps) {
   const [manualUrl, setManualUrl] = useState("")
+  const [showManualForm, setShowManualForm] = useState(false)
   const itemUrls = items.map((item) => item.url)
 
   async function handleAddRoute() {
     await onAddRoute(id, manualUrl)
     setManualUrl("")
+    setShowManualForm(false)
+  }
+
+  function handleCancelManualForm() {
+    setManualUrl("")
+    setShowManualForm(false)
   }
 
   return (
@@ -90,6 +97,9 @@ export function GroupSection({
           <p>{description}</p>
         </div>
         <div className="group-actions">
+          <button className="route-text-button" onClick={() => setShowManualForm((value) => !value)} type="button">
+            手动添加网址
+          </button>
           <button
             className="route-text-button"
             disabled={itemUrls.length === 0}
@@ -110,22 +120,27 @@ export function GroupSection({
           )}
         </div>
       </div>
-      <div className="manual-route-row">
-        <input
-          className="group-input manual-route-input"
-          onChange={(event) => setManualUrl(event.target.value)}
-          placeholder="手动输入网址，例如 https://example.com"
-          value={manualUrl}
-        />
-        <button
-          className="route-text-button is-primary"
-          disabled={!manualUrl.trim()}
-          onClick={() => void handleAddRoute()}
-          type="button"
-        >
-          添加到本分组
-        </button>
-      </div>
+      {showManualForm ? (
+        <div className="manual-route-panel">
+          <input
+            className="group-input manual-route-input"
+            onChange={(event) => setManualUrl(event.target.value)}
+            placeholder="手动输入网址，例如 https://example.com"
+            value={manualUrl}
+          />
+          <button
+            className="route-text-button is-primary"
+            disabled={!manualUrl.trim()}
+            onClick={() => void handleAddRoute()}
+            type="button"
+          >
+            添加
+          </button>
+          <button className="route-text-button" onClick={handleCancelManualForm} type="button">
+            取消
+          </button>
+        </div>
+      ) : null}
       <div className="route-list">
         {items.map((item) => (
           <RouteCard

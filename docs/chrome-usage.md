@@ -4,15 +4,15 @@
 
 最新可加载目录：
 
-- [dist](/f:/github/opentab/dist)
+- [dist](../dist)
 
 关键文件包括：
 
-- [dist/manifest.json](/f:/github/opentab/dist/manifest.json)
-- [dist/popup.html](/f:/github/opentab/dist/popup.html)
-- [dist/manager.html](/f:/github/opentab/dist/manager.html)
-- [dist/sidepanel.html](/f:/github/opentab/dist/sidepanel.html)
-- [dist/options.html](/f:/github/opentab/dist/options.html)
+- [dist/manifest.json](../dist/manifest.json)
+- [dist/popup.html](../dist/popup.html)
+- [dist/manager.html](../dist/manager.html)
+- [dist/sidepanel.html](../dist/sidepanel.html)
+- [dist/options.html](../dist/options.html)
 
 说明：
 
@@ -25,7 +25,7 @@
 1. 打开 `chrome://extensions/`
 2. 开启右上角“开发者模式”
 3. 点击“加载已解压的扩展程序”
-4. 选择目录 `F:\github\opentab\dist`
+4. 选择目录 `dist`
 
 ## 3. 当前版本怎么用
 

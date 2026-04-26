@@ -15,7 +15,7 @@
 
 详细约束见：
 
-- [docs/frozen-requirements.md](/f:/github/opentab/docs/frozen-requirements.md)
+- [docs/frozen-requirements.md](docs/frozen-requirements.md)
 
 ## 1. 产品目标
 

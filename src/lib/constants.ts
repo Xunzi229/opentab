@@ -1,6 +1,7 @@
 export const STORAGE_KEYS = {
   routes: "opentab_routes",
   groups: "opentab_groups",
+  tags: "opentab_tags",
   visits: "opentab_visits",
   settings: "opentab_settings"
 } as const

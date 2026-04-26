@@ -5,10 +5,12 @@ import type { RouteGroup } from "../types/group"
 import type { VisitRecord } from "../types/history"
 import type { RouteItem } from "../types/route"
 import type { AppSettings } from "../types/settings"
+import type { RouteTag } from "../types/tag"
 
 export type AppSnapshot = {
   routes: RouteItem[]
   groups: RouteGroup[]
+  tags: RouteTag[]
   visits: VisitRecord[]
   settings: AppSettings
 }
@@ -58,6 +60,14 @@ export async function saveGroups(groups: RouteGroup[]) {
   await setStorageValue(STORAGE_KEYS.groups, groups)
 }
 
+export async function getTags() {
+  return getStorageValue<RouteTag[]>(STORAGE_KEYS.tags, [])
+}
+
+export async function saveTags(tags: RouteTag[]) {
+  await setStorageValue(STORAGE_KEYS.tags, tags)
+}
+
 export async function getVisits() {
   const visits = await getStorageValue<VisitRecord[]>(STORAGE_KEYS.visits, [])
   const normalizedVisits = visits.map(normalizeVisitRecord)
@@ -88,6 +98,7 @@ export async function getAppSnapshot(): Promise<AppSnapshot> {
     {
       [STORAGE_KEYS.routes]: [],
       [STORAGE_KEYS.groups]: [...DEFAULT_GROUPS],
+      [STORAGE_KEYS.tags]: [],
       [STORAGE_KEYS.visits]: [],
       [STORAGE_KEYS.settings]: { ...DEFAULT_SETTINGS } as AppSettings
     },
@@ -95,6 +106,7 @@ export async function getAppSnapshot(): Promise<AppSnapshot> {
   ).then((data) => ({
     routes: (data[STORAGE_KEYS.routes] as RouteItem[]).map(normalizeRouteItem),
     groups: data[STORAGE_KEYS.groups] as RouteGroup[],
+    tags: data[STORAGE_KEYS.tags] as RouteTag[],
     visits: (data[STORAGE_KEYS.visits] as VisitRecord[]).map(normalizeVisitRecord),
     settings: data[STORAGE_KEYS.settings] as AppSettings
   }))
@@ -104,6 +116,7 @@ export async function saveAppSnapshot(snapshot: AppSnapshot) {
   await setStorageValues({
     [STORAGE_KEYS.routes]: snapshot.routes,
     [STORAGE_KEYS.groups]: snapshot.groups,
+    [STORAGE_KEYS.tags]: snapshot.tags,
     [STORAGE_KEYS.visits]: snapshot.visits,
     [STORAGE_KEYS.settings]: snapshot.settings
   })
@@ -113,6 +126,7 @@ export async function resetAppSnapshot() {
   await saveAppSnapshot({
     routes: [],
     groups: [...DEFAULT_GROUPS],
+    tags: [],
     visits: [],
     settings: { ...DEFAULT_SETTINGS } as AppSettings
   })

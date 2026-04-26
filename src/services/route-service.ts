@@ -121,6 +121,7 @@ export async function updateRoute(
     title: string
     url: string
     note?: string
+    tags?: string
   }
 ) {
   if (!isSupportedRouteUrl(input.url.trim())) {
@@ -129,6 +130,10 @@ export async function updateRoute(
 
   const routes = await getRoutes()
   const timestamp = nowIsoString()
+  const normalizedTags = (input.tags ?? "")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean)
   const nextRoutes = routes.map((route) =>
     route.id === routeId
       ? {
@@ -137,6 +142,7 @@ export async function updateRoute(
           url: input.url.trim() || route.url,
           path: toRoutePath(input.url.trim() || route.url),
           note: input.note ?? route.note,
+          tags: normalizedTags,
           updatedAt: timestamp
         }
       : route

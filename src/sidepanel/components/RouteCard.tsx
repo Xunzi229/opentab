@@ -8,6 +8,7 @@ type RouteCardProps = {
   path: string
   icon?: string
   note?: string
+  tags?: string[]
   starred?: boolean
   visitCount?: number
   groupId?: string
@@ -18,7 +19,7 @@ type RouteCardProps = {
   onToggleStar: (routeId: string) => void
   onDelete: (routeId: string) => void
   onMoveGroup: (routeId: string, groupId: string) => void
-  onEdit: (routeId: string, input: { title: string; url: string; note?: string }) => Promise<void>
+  onEdit: (routeId: string, input: { title: string; url: string; note?: string; tags?: string }) => Promise<void>
 }
 
 export function RouteCard({
@@ -28,6 +29,7 @@ export function RouteCard({
   path,
   icon,
   note,
+  tags = [],
   starred = false,
   visitCount = 0,
   groupId,
@@ -41,6 +43,7 @@ export function RouteCard({
   const [draftTitle, setDraftTitle] = useState(title)
   const [draftUrl, setDraftUrl] = useState(url)
   const [draftNote, setDraftNote] = useState(note ?? "")
+  const [draftTags, setDraftTags] = useState(tags.join(", "))
   const displayPath = useMemo(() => toDisplayRouteText(path, url), [path, url])
   const faviconUrl = useMemo(() => toFaviconUrl(url, icon), [icon, url])
 
@@ -48,6 +51,7 @@ export function RouteCard({
     setDraftTitle(title)
     setDraftUrl(url)
     setDraftNote(note ?? "")
+    setDraftTags(tags.join(", "))
     setIsEditing(false)
   }
 
@@ -56,6 +60,8 @@ export function RouteCard({
       title: draftTitle,
       url: draftUrl,
       note: draftNote
+      ,
+      tags: draftTags
     })
     setIsEditing(false)
   }
@@ -83,6 +89,12 @@ export function RouteCard({
               placeholder="备注（可选）"
               value={draftNote}
             />
+            <input
+              className="group-input"
+              onChange={(event) => setDraftTags(event.target.value)}
+              placeholder="标签，多个用逗号分隔"
+              value={draftTags}
+            />
           </div>
         ) : (
           <div className="route-row-summary">
@@ -95,6 +107,7 @@ export function RouteCard({
             </a>
             <span className="route-row-meta">近 7 天访问 {visitCount} 次</span>
             {note ? <span className="route-row-note" title={note}>{note}</span> : null}
+            {tags.length > 0 ? <span className="route-row-note" title={tags.join(", ")}>#{tags.join(" #")}</span> : null}
             {starred ? <span className="route-badge">已星标</span> : null}
           </div>
         )}

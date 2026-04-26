@@ -13,6 +13,7 @@ type GroupSectionProps = {
     path: string
     icon?: string
     note?: string
+    tags: string[]
     visitCount: number
     starred: boolean
     groupId?: string
@@ -31,7 +32,7 @@ type GroupSectionProps = {
   onToggleStar: (routeId: string) => void
   onDeleteRoute: (routeId: string) => void
   onMoveRouteGroup: (routeId: string, groupId: string) => void
-  onEditRoute: (routeId: string, input: { title: string; url: string; note?: string }) => Promise<void>
+  onEditRoute: (routeId: string, input: { title: string; url: string; note?: string; tags?: string }) => Promise<void>
   onOpenAllRoutes: (urls: string[]) => Promise<void>
   onAddRoute: (groupId: string, url: string) => Promise<void>
 }
@@ -134,6 +135,7 @@ export function GroupSection({
             icon={item.icon}
             key={item.id}
             note={item.note}
+            tags={item.tags}
             onDelete={onDeleteRoute}
             onEdit={onEditRoute}
             onMoveGroup={onMoveRouteGroup}

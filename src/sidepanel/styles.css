@@ -215,6 +215,29 @@
   padding: 8px 0;
 }
 
+.tag-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.tag-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #e7ebf3;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.tag-row-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .manual-route-row {
   margin-bottom: 12px;
 }

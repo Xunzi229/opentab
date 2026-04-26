@@ -41,6 +41,7 @@ export function ImportExportPage({ onUpdated }: ImportExportPageProps) {
       await saveAppSnapshot({
         routes: Array.isArray(parsed.routes) ? parsed.routes : [],
         groups: Array.isArray(parsed.groups) ? parsed.groups : [],
+        tags: Array.isArray(parsed.tags) ? parsed.tags : [],
         visits: Array.isArray(parsed.visits) ? parsed.visits : [],
         settings:
           parsed.settings && typeof parsed.settings === "object"

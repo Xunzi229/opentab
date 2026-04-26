@@ -79,7 +79,7 @@ export function AllRoutesPage() {
     setStatusMessage("路由分组已更新。")
   }
 
-  async function handleEditRoute(routeId: string, input: { title: string; url: string; note?: string }) {
+  async function handleEditRoute(routeId: string, input: { title: string; url: string; note?: string; tags?: string }) {
     try {
       await updateRoute(routeId, input)
       setStatusMessage("路由已更新。")
@@ -136,6 +136,7 @@ export function AllRoutesPage() {
                 id={item.id}
                 key={item.id}
                 note={item.note}
+                tags={item.tags}
                 onDelete={handleDeleteRoute}
                 onEdit={handleEditRoute}
                 onMoveGroup={handleMoveRouteGroup}

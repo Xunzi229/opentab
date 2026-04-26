@@ -3,6 +3,7 @@ import { Sidebar, type SidepanelView } from "./components/Sidebar"
 import { AllRoutesPage } from "./pages/AllRoutesPage"
 import { DashboardPage } from "./pages/DashboardPage"
 import { RecentVisitsPage } from "./pages/RecentVisitsPage"
+import { TagsPage } from "./pages/TagsPage"
 
 export function App() {
   const [activeView, setActiveView] = useState<SidepanelView>("groups")
@@ -14,7 +15,11 @@ export function App() {
         {activeView === "all-routes" ? <AllRoutesPage /> : null}
         {activeView === "recent-visits" ? <RecentVisitsPage /> : null}
         {activeView === "groups" ? <DashboardPage /> : null}
-        {activeView !== "all-routes" && activeView !== "recent-visits" && activeView !== "groups" ? (
+        {activeView === "tags" ? <TagsPage /> : null}
+        {activeView !== "all-routes" &&
+        activeView !== "recent-visits" &&
+        activeView !== "groups" &&
+        activeView !== "tags" ? (
           <section className="surface group-section">
             <div className="section-head">
               <div>

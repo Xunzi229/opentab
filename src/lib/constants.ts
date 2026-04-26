@@ -23,5 +23,9 @@ export const DEFAULT_SETTINGS = {
   dedupeByUrl: true,
   syncProvider: "local",
   enableVisitTracking: true,
-  viewMode: "grid"
+  viewMode: "grid",
+  webdavUrl: "",
+  webdavUsername: "",
+  webdavPassword: "",
+  webdavFilePath: "opentab/backup.opentab"
 } as const

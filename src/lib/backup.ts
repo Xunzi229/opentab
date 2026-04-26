@@ -1,3 +1,4 @@
+import { DEFAULT_SETTINGS } from "./constants"
 import type { AppSnapshot } from "../repositories/local-repo"
 
 const BACKUP_MAGIC = "OPENTAB_BACKUP_V1"
@@ -69,11 +70,6 @@ export async function decodeBackup(raw: string): Promise<AppSnapshot> {
     settings:
       parsed.settings && typeof parsed.settings === "object"
         ? parsed.settings
-        : {
-            dedupeByUrl: true,
-            syncProvider: "local",
-            enableVisitTracking: true,
-            viewMode: "grid"
-          }
+        : { ...DEFAULT_SETTINGS }
   }
 }

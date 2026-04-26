@@ -3,4 +3,8 @@ export type AppSettings = {
   syncProvider: "local" | "chrome-sync" | "webdav" | "rest"
   enableVisitTracking: boolean
   viewMode: "grid" | "list"
+  webdavUrl: string
+  webdavUsername: string
+  webdavPassword: string
+  webdavFilePath: string
 }

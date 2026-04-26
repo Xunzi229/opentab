@@ -1,6 +1,6 @@
 import { DEFAULT_GROUP_ID, DEFAULT_GROUPS } from "../lib/constants"
-import { nowIsoString } from "../lib/time"
-import { getGroups, getRoutes, saveGroups, saveRoutes } from "../repositories/local-repo"
+import { isWithinLastDays, nowIsoString } from "../lib/time"
+import { getGroups, getRoutes, getVisits, saveGroups, saveRoutes } from "../repositories/local-repo"
 import type { RouteGroup } from "../types/group"
 
 function normalizeGroupName(name: string) {
@@ -24,12 +24,24 @@ export async function listGroups() {
 }
 
 export async function getGroupedRoutes() {
-  const [groups, routes] = await Promise.all([listGroups(), getRoutes()])
+  const [groups, routes, visits] = await Promise.all([listGroups(), getRoutes(), getVisits()])
   const safeGroups = groups.length > 0 ? groups : [...DEFAULT_GROUPS]
+  const weeklyVisitCountByRouteId = visits.reduce<Record<string, number>>((accumulator, visit) => {
+    if (!visit.routeId || !isWithinLastDays(visit.visitedAt, 7)) {
+      return accumulator
+    }
+
+    accumulator[visit.routeId] = (accumulator[visit.routeId] ?? 0) + 1
+    return accumulator
+  }, {})
 
   return safeGroups.map((group) => {
     const items = routes
-      .filter((route) => (route.groupId ?? DEFAULT_GROUPS[0].id) === group.id)
+      .filter((route) => (route.groupId ?? DEFAULT_GROUP_ID) === group.id)
+      .map((route) => ({
+        ...route,
+        visitCount: weeklyVisitCountByRouteId[route.id] ?? 0
+      }))
       .sort((left, right) => {
         if (left.starred !== right.starred) {
           return left.starred ? -1 : 1

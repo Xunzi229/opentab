@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react"
-import { toDisplayRouteText } from "../../lib/url"
+import { toDisplayRouteText, toFaviconUrl } from "../../lib/url"
 
 type RouteCardProps = {
   id: string
   title: string
   url: string
   path: string
+  icon?: string
   note?: string
   starred?: boolean
   visitCount?: number
@@ -25,6 +26,7 @@ export function RouteCard({
   title,
   url,
   path,
+  icon,
   note,
   starred = false,
   visitCount = 0,
@@ -40,6 +42,7 @@ export function RouteCard({
   const [draftUrl, setDraftUrl] = useState(url)
   const [draftNote, setDraftNote] = useState(note ?? "")
   const displayPath = useMemo(() => toDisplayRouteText(path, url), [path, url])
+  const faviconUrl = useMemo(() => toFaviconUrl(url, icon), [icon, url])
 
   function handleCancelEdit() {
     setDraftTitle(title)
@@ -82,21 +85,18 @@ export function RouteCard({
             />
           </div>
         ) : (
-          <>
-            <div className="route-row-titlebar">
-              <a className="route-title-link" href={url} rel="noreferrer" target="_blank" title={title}>
-                {title}
-              </a>
-              {starred ? <span className="route-badge">已星标</span> : null}
-            </div>
-            <a className="route-link" href={url} rel="noreferrer" target="_blank" title={url}>
+          <div className="route-row-summary">
+            <img alt="" className="route-favicon" src={faviconUrl} />
+            <a className="route-title-link" href={url} rel="noreferrer" target="_blank" title={title}>
+              {title}
+            </a>
+            <a className="route-link route-link-inline" href={url} rel="noreferrer" target="_blank" title={url}>
               {displayPath}
             </a>
-            <div className="route-row-meta">
-              <span>访问 {visitCount} 次</span>
-              {note ? <span>{note}</span> : null}
-            </div>
-          </>
+            <span className="route-row-meta">近 7 天访问 {visitCount} 次</span>
+            {note ? <span className="route-row-note" title={note}>{note}</span> : null}
+            {starred ? <span className="route-badge">已星标</span> : null}
+          </div>
         )}
       </div>
       <div className="route-row-actions">

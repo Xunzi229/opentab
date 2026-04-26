@@ -65,3 +65,16 @@ export function toDisplayRouteText(path: string, url: string) {
     return url
   }
 }
+
+export function toFaviconUrl(url: string, icon?: string) {
+  if (icon?.trim()) {
+    return icon
+  }
+
+  try {
+    const parsedUrl = new URL(url)
+    return `https://www.google.com/s2/favicons?domain=${parsedUrl.hostname}&sz=32`
+  } catch {
+    return ""
+  }
+}

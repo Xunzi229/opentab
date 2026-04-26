@@ -159,7 +159,7 @@ export function DashboardPage() {
         <header className="dashboard-head">
           <div>
             <h3>我的分组</h3>
-            <p>这里使用列表方式管理收藏，更适合高频查看、批量打开和后续维护。</p>
+            <p>这里使用更紧凑的一行式列表管理收藏，方便高频查看和快速操作。</p>
           </div>
           <div className="dashboard-toolbar">
             <SearchBar value={searchText} onChange={setSearchText} />
@@ -191,7 +191,7 @@ export function DashboardPage() {
             <div className="section-head">
               <div>
                 <h3>还没有可展示的收藏</h3>
-                <p>先在 popup 中收藏当前页面，或者换个关键词再试。</p>
+                <p>先在 Popup 中收藏当前页面，或者换个关键词再试。</p>
               </div>
             </div>
           </section>

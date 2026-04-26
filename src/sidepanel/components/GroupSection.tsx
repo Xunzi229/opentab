@@ -10,6 +10,7 @@ type GroupSectionProps = {
     title: string
     url: string
     path: string
+    icon?: string
     note?: string
     visitCount: number
     starred: boolean
@@ -105,6 +106,7 @@ export function GroupSection({
             groupId={item.groupId}
             groups={groups}
             id={item.id}
+            icon={item.icon}
             key={item.id}
             note={item.note}
             onDelete={onDeleteRoute}

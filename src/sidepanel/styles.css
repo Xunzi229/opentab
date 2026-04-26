@@ -207,7 +207,7 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 16px;
-  padding: 14px 16px;
+  padding: 10px 14px;
   border: 1px solid #e7ebf3;
   border-radius: 8px;
   background: #fff;
@@ -215,8 +215,21 @@
 
 .route-row-main {
   min-width: 0;
-  display: grid;
-  gap: 6px;
+}
+
+.route-row-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.route-favicon {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  flex: 0 0 16px;
 }
 
 .route-row-titlebar {
@@ -231,6 +244,10 @@
   font-weight: 600;
   text-decoration: none;
   min-width: 0;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .route-title-link:hover,
@@ -242,15 +259,31 @@
   color: #3257d8;
   font-size: 14px;
   text-decoration: none;
-  word-break: break-all;
+  min-width: 0;
+}
+
+.route-link-inline {
+  max-width: 340px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .route-row-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
   color: #6c7894;
   font-size: 13px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.route-row-note {
+  color: #6c7894;
+  font-size: 13px;
+  min-width: 0;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .route-badge {
@@ -266,8 +299,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
   justify-content: flex-end;
+  flex: 0 0 auto;
 }
 
 .route-edit-grid {
@@ -275,9 +308,30 @@
   gap: 8px;
 }
 
+.recent-table-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.recent-table-head p {
+  margin: 0;
+  color: #66738f;
+  font-size: 13px;
+}
+
 .recent-table table {
   width: 100%;
   border-collapse: collapse;
+}
+
+.recent-link-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .recent-table th,
@@ -316,6 +370,19 @@
 
   .route-row-actions {
     justify-content: flex-start;
+  }
+
+  .route-row-summary {
+    display: grid;
+    gap: 6px;
+    white-space: normal;
+  }
+
+  .route-title-link,
+  .route-link-inline,
+  .route-row-note {
+    max-width: none;
+    white-space: normal;
   }
 
   .searchbar-input {

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { DEFAULT_GROUP_ID, STORAGE_KEYS } from "../../lib/constants"
 import { createGroup, deleteGroup, getGroupedRoutes, renameGroup } from "../../services/group-service"
 import { listVisits } from "../../services/history-service"
-import { moveRouteToGroup, removeRoute, toggleRouteStar, updateRoute } from "../../services/route-service"
+import { moveRouteToGroup, removeRoute, saveRoute, toggleRouteStar, updateRoute } from "../../services/route-service"
 import type { VisitRecord } from "../../types/history"
 import { GroupSection } from "../components/GroupSection"
 import { HeroBanner } from "../components/HeroBanner"
@@ -151,6 +151,19 @@ export function DashboardPage() {
     setStatusMessage(`已批量打开 ${validUrls.length} 个地址。`)
   }
 
+  async function handleAddRoute(groupId: string, url: string) {
+    try {
+      await saveRoute({
+        title: "",
+        url,
+        groupId
+      })
+      setStatusMessage("网址已添加到当前分组。")
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "手动添加网址失败。")
+    }
+  }
+
   return (
     <main className="sidepanel-layout">
       <Sidebar />
@@ -191,7 +204,7 @@ export function DashboardPage() {
             <div className="section-head">
               <div>
                 <h3>还没有可展示的收藏</h3>
-                <p>先在 Popup 中收藏当前页面，或者换个关键词再试。</p>
+                <p>先在 Popup 中收藏当前页面，或者手动输入一个网址试试。</p>
               </div>
             </div>
           </section>
@@ -206,6 +219,7 @@ export function DashboardPage() {
               isEditing={editingGroupId === group.id}
               items={group.items}
               key={group.id}
+              onAddRoute={handleAddRoute}
               onCancelEdit={handleCancelEdit}
               onDeleteGroup={handleDeleteGroup}
               onDeleteRoute={handleDeleteRoute}

@@ -125,7 +125,8 @@
 
 .group-actions,
 .group-create-row,
-.group-edit-row {
+.group-edit-row,
+.manual-route-row {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -133,7 +134,8 @@
 
 .group-create-row,
 .group-edit-row,
-.group-actions {
+.group-actions,
+.manual-route-row {
   flex-wrap: wrap;
 }
 
@@ -148,6 +150,11 @@
 
 .group-input {
   min-width: 220px;
+}
+
+.manual-route-input {
+  min-width: 320px;
+  flex: 1 1 320px;
 }
 
 .route-select {
@@ -195,6 +202,10 @@
   margin: 12px 0 0;
   color: #66738f;
   font-size: 13px;
+}
+
+.manual-route-row {
+  margin-bottom: 12px;
 }
 
 .route-list {

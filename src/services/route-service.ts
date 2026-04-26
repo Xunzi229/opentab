@@ -13,21 +13,37 @@ export type SaveRouteInput = {
   groupId?: string
 }
 
+function toFallbackTitle(url: string) {
+  try {
+    const parsedUrl = new URL(url)
+    return parsedUrl.hostname.replace(/^www\./, "")
+  } catch {
+    return "未命名页面"
+  }
+}
+
 export async function saveRoute(input: SaveRouteInput) {
+  if (!isSupportedRouteUrl(input.url.trim())) {
+    throw new Error("只能保存可访问的 http(s) 地址。")
+  }
+
   const routes = await getRoutes()
-  const existing = findRouteByUrl(routes, input.url)
+  const normalizedUrl = input.url.trim()
+  const existing = findRouteByUrl(routes, normalizedUrl)
   const timestamp = nowIsoString()
-  const resolvedPath = input.path || toRoutePath(input.url)
+  const resolvedPath = input.path || toRoutePath(normalizedUrl)
+  const resolvedTitle = input.title.trim() || toFallbackTitle(normalizedUrl)
 
   if (existing) {
     const updatedRoutes = routes.map((route) =>
       route.id === existing.id
         ? {
             ...route,
-            title: input.title || route.title,
-            url: input.url,
+            title: resolvedTitle || route.title,
+            url: normalizedUrl,
             path: resolvedPath,
             icon: input.icon ?? route.icon,
+            groupId: input.groupId ?? route.groupId,
             updatedAt: timestamp
           }
         : route
@@ -39,8 +55,8 @@ export async function saveRoute(input: SaveRouteInput) {
 
   const route: RouteItem = {
     id: crypto.randomUUID(),
-    title: input.title || "未命名页面",
-    url: input.url,
+    title: resolvedTitle,
+    url: normalizedUrl,
     path: resolvedPath,
     icon: input.icon,
     groupId: input.groupId ?? DEFAULT_GROUP_ID,

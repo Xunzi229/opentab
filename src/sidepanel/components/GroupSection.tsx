@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { RouteCard } from "./RouteCard"
 
 type GroupSectionProps = {
@@ -32,6 +33,7 @@ type GroupSectionProps = {
   onMoveRouteGroup: (routeId: string, groupId: string) => void
   onEditRoute: (routeId: string, input: { title: string; url: string; note?: string }) => Promise<void>
   onOpenAllRoutes: (urls: string[]) => Promise<void>
+  onAddRoute: (groupId: string, url: string) => Promise<void>
 }
 
 export function GroupSection({
@@ -52,9 +54,16 @@ export function GroupSection({
   onDeleteRoute,
   onMoveRouteGroup,
   onEditRoute,
-  onOpenAllRoutes
+  onOpenAllRoutes,
+  onAddRoute
 }: GroupSectionProps) {
+  const [manualUrl, setManualUrl] = useState("")
   const itemUrls = items.map((item) => item.url)
+
+  async function handleAddRoute() {
+    await onAddRoute(id, manualUrl)
+    setManualUrl("")
+  }
 
   return (
     <section className="surface group-section">
@@ -99,6 +108,22 @@ export function GroupSection({
             </button>
           )}
         </div>
+      </div>
+      <div className="manual-route-row">
+        <input
+          className="group-input manual-route-input"
+          onChange={(event) => setManualUrl(event.target.value)}
+          placeholder="手动输入网址，例如 https://example.com"
+          value={manualUrl}
+        />
+        <button
+          className="route-text-button is-primary"
+          disabled={!manualUrl.trim()}
+          onClick={() => void handleAddRoute()}
+          type="button"
+        >
+          添加到本分组
+        </button>
       </div>
       <div className="route-list">
         {items.map((item) => (

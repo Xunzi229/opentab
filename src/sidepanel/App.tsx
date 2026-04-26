@@ -3,6 +3,7 @@ import { Sidebar, type SidepanelView } from "./components/Sidebar"
 import { AllRoutesPage } from "./pages/AllRoutesPage"
 import { DashboardPage } from "./pages/DashboardPage"
 import { ExportPage } from "./pages/ExportPage"
+import { ImportPage } from "./pages/ImportPage"
 import { RecentVisitsPage } from "./pages/RecentVisitsPage"
 import { TagsPage } from "./pages/TagsPage"
 
@@ -18,11 +19,13 @@ export function App() {
         {activeView === "groups" ? <DashboardPage /> : null}
         {activeView === "tags" ? <TagsPage /> : null}
         {activeView === "export" ? <ExportPage /> : null}
+        {activeView === "import" ? <ImportPage /> : null}
         {activeView !== "all-routes" &&
         activeView !== "recent-visits" &&
         activeView !== "groups" &&
         activeView !== "tags" &&
-        activeView !== "export" ? (
+        activeView !== "export" &&
+        activeView !== "import" ? (
           <section className="surface group-section">
             <div className="section-head">
               <div>

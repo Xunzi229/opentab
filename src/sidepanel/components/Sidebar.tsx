@@ -3,8 +3,7 @@ export type SidepanelView =
   | "recent-visits"
   | "groups"
   | "tags"
-  | "export"
-  | "import"
+  | "backup"
 
 type SidebarProps = {
   activeView: SidepanelView
@@ -16,8 +15,7 @@ const items: Array<{ key: SidepanelView; label: string }> = [
   { key: "recent-visits", label: "最近访问" },
   { key: "groups", label: "我的分组" },
   { key: "tags", label: "标签管理" },
-  { key: "export", label: "导出" },
-  { key: "import", label: "导入" }
+  { key: "backup", label: "备份与同步" }
 ]
 
 export function Sidebar({ activeView, onChange }: SidebarProps) {

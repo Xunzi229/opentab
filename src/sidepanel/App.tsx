@@ -1,9 +1,8 @@
 import { useState } from "react"
 import { Sidebar, type SidepanelView } from "./components/Sidebar"
 import { AllRoutesPage } from "./pages/AllRoutesPage"
+import { BackupPage } from "./pages/BackupPage"
 import { DashboardPage } from "./pages/DashboardPage"
-import { ExportPage } from "./pages/ExportPage"
-import { ImportPage } from "./pages/ImportPage"
 import { RecentVisitsPage } from "./pages/RecentVisitsPage"
 import { TagsPage } from "./pages/TagsPage"
 
@@ -18,14 +17,12 @@ export function App() {
         {activeView === "recent-visits" ? <RecentVisitsPage /> : null}
         {activeView === "groups" ? <DashboardPage /> : null}
         {activeView === "tags" ? <TagsPage /> : null}
-        {activeView === "export" ? <ExportPage /> : null}
-        {activeView === "import" ? <ImportPage /> : null}
+        {activeView === "backup" ? <BackupPage /> : null}
         {activeView !== "all-routes" &&
         activeView !== "recent-visits" &&
         activeView !== "groups" &&
         activeView !== "tags" &&
-        activeView !== "export" &&
-        activeView !== "import" ? (
+        activeView !== "backup" ? (
           <section className="surface group-section">
             <div className="section-head">
               <div>

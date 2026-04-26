@@ -238,6 +238,13 @@
   gap: 10px;
 }
 
+.stats-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .manual-route-row {
   margin-bottom: 12px;
 }

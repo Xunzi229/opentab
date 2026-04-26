@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Sidebar, type SidepanelView } from "./components/Sidebar"
 import { AllRoutesPage } from "./pages/AllRoutesPage"
 import { DashboardPage } from "./pages/DashboardPage"
+import { ExportPage } from "./pages/ExportPage"
 import { RecentVisitsPage } from "./pages/RecentVisitsPage"
 import { TagsPage } from "./pages/TagsPage"
 
@@ -16,10 +17,12 @@ export function App() {
         {activeView === "recent-visits" ? <RecentVisitsPage /> : null}
         {activeView === "groups" ? <DashboardPage /> : null}
         {activeView === "tags" ? <TagsPage /> : null}
+        {activeView === "export" ? <ExportPage /> : null}
         {activeView !== "all-routes" &&
         activeView !== "recent-visits" &&
         activeView !== "groups" &&
-        activeView !== "tags" ? (
+        activeView !== "tags" &&
+        activeView !== "export" ? (
           <section className="surface group-section">
             <div className="section-head">
               <div>

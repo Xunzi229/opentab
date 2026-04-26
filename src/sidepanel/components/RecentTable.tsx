@@ -7,9 +7,15 @@ const DEFAULT_VISIBLE_ROWS = 5
 
 type RecentTableProps = {
   rows: VisitRecord[]
+  title?: string
+  description?: string
 }
 
-export function RecentTable({ rows }: RecentTableProps) {
+export function RecentTable({
+  rows,
+  title = "最近访问",
+  description = "默认显示 5 行，展开后可查看完整最近访问记录。"
+}: RecentTableProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const visibleRows = useMemo(
     () => (isExpanded ? rows : rows.slice(0, DEFAULT_VISIBLE_ROWS)),
@@ -20,8 +26,8 @@ export function RecentTable({ rows }: RecentTableProps) {
     <section className="surface recent-table">
       <div className="recent-table-head">
         <div>
-          <h3>最近访问</h3>
-          <p>默认显示 5 行，展开后可查看完整最近访问记录。</p>
+          <h3>{title}</h3>
+          <p>{description}</p>
         </div>
         {rows.length > DEFAULT_VISIBLE_ROWS ? (
           <button className="route-text-button" onClick={() => setIsExpanded((value) => !value)} type="button">

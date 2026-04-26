@@ -25,14 +25,15 @@ export function App() {
       const existingTab = existingTabs[0]
 
       if (existingTab?.id) {
-        await chrome.tabs.update(existingTab.id, { active: true })
+        await chrome.tabs.update(existingTab.id, { active: true, pinned: true })
         if (typeof existingTab.windowId === "number") {
           await chrome.windows.update(existingTab.windowId, { focused: true })
         }
       } else {
         await chrome.tabs.create({
           url: managerUrl,
-          active: true
+          active: true,
+          pinned: true
         })
       }
 

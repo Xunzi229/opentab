@@ -1,18 +1,39 @@
-export function Sidebar() {
-  const items = ["全部收藏", "最近访问", "我的分组", "标签管理", "导入 / 导出", "设置"]
+export type SidepanelView =
+  | "all-routes"
+  | "recent-visits"
+  | "groups"
+  | "tags"
+  | "export"
+  | "import"
 
+type SidebarProps = {
+  activeView: SidepanelView
+  onChange: (view: SidepanelView) => void
+}
+
+const items: Array<{ key: SidepanelView; label: string }> = [
+  { key: "all-routes", label: "全部收藏" },
+  { key: "recent-visits", label: "最近访问" },
+  { key: "groups", label: "我的分组" },
+  { key: "tags", label: "标签管理" },
+  { key: "export", label: "导出" },
+  { key: "import", label: "导入" }
+]
+
+export function Sidebar({ activeView, onChange }: SidebarProps) {
   return (
     <aside className="sidepanel-sidebar">
       <h1 className="sidepanel-brand">OpenTab</h1>
-      <p className="sidepanel-brand-copy">把常用后台路由收拢成一个可恢复的工作台。</p>
+      <p className="sidepanel-brand-copy">把常用网址收拢成一个可恢复、可管理的工作台。</p>
       <nav className="sidepanel-nav">
-        {items.map((item, index) => (
+        {items.map((item) => (
           <button
-            className={`sidepanel-nav-item${index === 2 ? " is-active" : ""}`}
-            key={item}
+            className={`sidepanel-nav-item${activeView === item.key ? " is-active" : ""}`}
+            key={item.key}
+            onClick={() => onChange(item.key)}
             type="button"
           >
-            {item}
+            {item.label}
           </button>
         ))}
       </nav>

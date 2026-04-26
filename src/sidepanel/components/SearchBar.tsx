@@ -8,7 +8,7 @@ export function SearchBar({ value, onChange }: SearchBarProps) {
     <input
       className="searchbar-input"
       onChange={(event) => onChange(event.target.value)}
-      placeholder="搜索路由名称或地址..."
+      placeholder="搜索网址名称、地址或备注..."
       type="search"
       value={value}
     />

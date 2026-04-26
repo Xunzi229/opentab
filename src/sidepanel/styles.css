@@ -49,6 +49,11 @@
   gap: 20px;
 }
 
+.page-stack {
+  display: grid;
+  gap: 20px;
+}
+
 .hero-banner {
   padding: 28px;
   background: linear-gradient(90deg, #eef3ff 0%, #ece9ff 100%);
@@ -202,6 +207,12 @@
   margin: 12px 0 0;
   color: #66738f;
   font-size: 13px;
+}
+
+.empty-state {
+  color: #66738f;
+  font-size: 14px;
+  padding: 8px 0;
 }
 
 .manual-route-row {

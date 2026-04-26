@@ -1,5 +1,28 @@
+import { useState } from "react"
+import { Sidebar, type SidepanelView } from "./components/Sidebar"
+import { AllRoutesPage } from "./pages/AllRoutesPage"
 import { DashboardPage } from "./pages/DashboardPage"
 
 export function App() {
-  return <DashboardPage />
+  const [activeView, setActiveView] = useState<SidepanelView>("groups")
+
+  return (
+    <main className="sidepanel-layout">
+      <Sidebar activeView={activeView} onChange={setActiveView} />
+      <section className="sidepanel-content">
+        {activeView === "all-routes" ? <AllRoutesPage /> : null}
+        {activeView === "groups" ? <DashboardPage /> : null}
+        {activeView !== "all-routes" && activeView !== "groups" ? (
+          <section className="surface group-section">
+            <div className="section-head">
+              <div>
+                <h3>开发中</h3>
+                <p>这个页面下一步就接上。</p>
+              </div>
+            </div>
+          </section>
+        ) : null}
+      </section>
+    </main>
+  )
 }

@@ -8,7 +8,6 @@ import { GroupSection } from "../components/GroupSection"
 import { HeroBanner } from "../components/HeroBanner"
 import { RecentTable } from "../components/RecentTable"
 import { SearchBar } from "../components/SearchBar"
-import { Sidebar } from "../components/Sidebar"
 import { ViewToggle } from "../components/ViewToggle"
 
 type GroupedRoutes = Awaited<ReturnType<typeof getGroupedRoutes>>
@@ -165,77 +164,74 @@ export function DashboardPage() {
   }
 
   return (
-    <main className="sidepanel-layout">
-      <Sidebar />
-      <section className="sidepanel-content">
-        <HeroBanner />
-        <header className="dashboard-head">
+    <section className="page-stack">
+      <HeroBanner />
+      <header className="dashboard-head">
+        <div>
+          <h3>我的分组</h3>
+          <p>这里使用更紧凑的一行式列表管理收藏，方便高频查看和快速操作。</p>
+        </div>
+        <div className="dashboard-toolbar">
+          <SearchBar value={searchText} onChange={setSearchText} />
+          <ViewToggle />
+        </div>
+      </header>
+      <section className="surface group-section">
+        <div className="section-head">
           <div>
-            <h3>我的分组</h3>
-            <p>这里使用更紧凑的一行式列表管理收藏，方便高频查看和快速操作。</p>
+            <h3>分组管理</h3>
+            <p>分组名称必须唯一。你可以在这里创建分组，并把路由移动到更合适的位置。</p>
           </div>
-          <div className="dashboard-toolbar">
-            <SearchBar value={searchText} onChange={setSearchText} />
-            <ViewToggle />
-          </div>
-        </header>
+        </div>
+        <div className="group-create-row">
+          <input
+            className="group-input"
+            onChange={(event) => setNewGroupName(event.target.value)}
+            placeholder="输入新的分组名称"
+            value={newGroupName}
+          />
+          <button className="route-text-button is-primary" onClick={handleCreateGroup} type="button">
+            新建分组
+          </button>
+        </div>
+        <p className="dashboard-status">{statusMessage}</p>
+      </section>
+      {filteredGroups.length === 0 ? (
         <section className="surface group-section">
           <div className="section-head">
             <div>
-              <h3>分组管理</h3>
-              <p>分组名称必须唯一。你可以在这里创建分组，并把路由移动到更合适的位置。</p>
+              <h3>还没有可展示的收藏</h3>
+              <p>先在 Popup 中收藏当前页面，或者手动输入一个网址试试。</p>
             </div>
           </div>
-          <div className="group-create-row">
-            <input
-              className="group-input"
-              onChange={(event) => setNewGroupName(event.target.value)}
-              placeholder="输入新的分组名称"
-              value={newGroupName}
-            />
-            <button className="route-text-button is-primary" onClick={handleCreateGroup} type="button">
-              新建分组
-            </button>
-          </div>
-          <p className="dashboard-status">{statusMessage}</p>
         </section>
-        {filteredGroups.length === 0 ? (
-          <section className="surface group-section">
-            <div className="section-head">
-              <div>
-                <h3>还没有可展示的收藏</h3>
-                <p>先在 Popup 中收藏当前页面，或者手动输入一个网址试试。</p>
-              </div>
-            </div>
-          </section>
-        ) : (
-          filteredGroups.map((group) => (
-            <GroupSection
-              description={`${group.count} 条路由`}
-              editingName={editingGroupName}
-              groups={groupOptions}
-              id={group.id}
-              isDefault={group.id === DEFAULT_GROUP_ID}
-              isEditing={editingGroupId === group.id}
-              items={group.items}
-              key={group.id}
-              onAddRoute={handleAddRoute}
-              onCancelEdit={handleCancelEdit}
-              onDeleteGroup={handleDeleteGroup}
-              onDeleteRoute={handleDeleteRoute}
-              onEditRoute={handleEditRoute}
-              onEditingNameChange={setEditingGroupName}
-              onMoveRouteGroup={handleMoveRouteGroup}
-              onOpenAllRoutes={handleOpenAllRoutes}
-              onSaveEdit={handleSaveEdit}
-              onStartEdit={handleStartEdit}
-              onToggleStar={handleToggleStar}
-              title={group.name}
-            />
-          ))
-        )}
-        <RecentTable rows={visits} />
-      </section>
-    </main>
+      ) : (
+        filteredGroups.map((group) => (
+          <GroupSection
+            description={`${group.count} 条路由`}
+            editingName={editingGroupName}
+            groups={groupOptions}
+            id={group.id}
+            isDefault={group.id === DEFAULT_GROUP_ID}
+            isEditing={editingGroupId === group.id}
+            items={group.items}
+            key={group.id}
+            onAddRoute={handleAddRoute}
+            onCancelEdit={handleCancelEdit}
+            onDeleteGroup={handleDeleteGroup}
+            onDeleteRoute={handleDeleteRoute}
+            onEditRoute={handleEditRoute}
+            onEditingNameChange={setEditingGroupName}
+            onMoveRouteGroup={handleMoveRouteGroup}
+            onOpenAllRoutes={handleOpenAllRoutes}
+            onSaveEdit={handleSaveEdit}
+            onStartEdit={handleStartEdit}
+            onToggleStar={handleToggleStar}
+            title={group.name}
+          />
+        ))
+      )}
+      <RecentTable rows={visits} />
+    </section>
   )
 }

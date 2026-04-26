@@ -1,12 +1,13 @@
 import { useRef, useState, type ChangeEvent } from "react"
+import { createBackupFilename, decodeBackup, encodeBackup } from "../../lib/backup"
 import { getAppSnapshot, resetAppSnapshot, saveAppSnapshot } from "../../repositories/local-repo"
 
 type ImportExportPageProps = {
   onUpdated: () => Promise<void> | void
 }
 
-function downloadTextFile(filename: string, text: string) {
-  const blob = new Blob([text], { type: "application/json;charset=utf-8" })
+function downloadBackupFile(filename: string, content: string) {
+  const blob = new Blob([content], { type: "application/octet-stream" })
   const url = URL.createObjectURL(blob)
   const link = document.createElement("a")
   link.href = url
@@ -16,13 +17,14 @@ function downloadTextFile(filename: string, text: string) {
 }
 
 export function ImportExportPage({ onUpdated }: ImportExportPageProps) {
-  const [status, setStatus] = useState("你可以导出当前本地数据，也可以重新导入历史备份。")
+  const [status, setStatus] = useState("你可以导出当前本地数据，也可以重新导入 .opentab 备份。")
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   async function handleExport() {
     const snapshot = await getAppSnapshot()
-    downloadTextFile("opentab-backup.json", JSON.stringify(snapshot, null, 2))
-    setStatus("已导出本地数据备份。")
+    const encoded = await encodeBackup(snapshot)
+    downloadBackupFile(createBackupFilename(), encoded)
+    setStatus("已导出本地 .opentab 备份文件。")
   }
 
   function handleImportClick() {
@@ -37,29 +39,15 @@ export function ImportExportPage({ onUpdated }: ImportExportPageProps) {
 
     try {
       const raw = await file.text()
-      const parsed = JSON.parse(raw)
-      await saveAppSnapshot({
-        routes: Array.isArray(parsed.routes) ? parsed.routes : [],
-        groups: Array.isArray(parsed.groups) ? parsed.groups : [],
-        tags: Array.isArray(parsed.tags) ? parsed.tags : [],
-        visits: Array.isArray(parsed.visits) ? parsed.visits : [],
-        settings:
-          parsed.settings && typeof parsed.settings === "object"
-            ? parsed.settings
-            : {
-                dedupeByUrl: true,
-                syncProvider: "local",
-                enableVisitTracking: true,
-                viewMode: "grid"
-              }
-      })
+      const snapshot = await decodeBackup(raw)
+      await saveAppSnapshot(snapshot)
 
       setStatus("导入完成，当前数据已恢复。")
       await onUpdated()
       event.target.value = ""
     } catch (error) {
       console.error(error)
-      setStatus("导入失败，请确认文件内容是合法的 JSON 备份。")
+      setStatus(error instanceof Error ? error.message : "导入失败，请确认备份文件没有损坏。")
     }
   }
 
@@ -72,19 +60,25 @@ export function ImportExportPage({ onUpdated }: ImportExportPageProps) {
   return (
     <section className="surface options-card">
       <h3>导入 / 导出</h3>
-      <p>先把数据流转能力打稳，后面接 Chrome Sync 和 WebDAV 时会轻松很多。</p>
+      <p>这里使用压缩编码后的 .opentab 备份格式，避免直接暴露原始 JSON 结构。</p>
       <div className="options-actions" style={{ marginTop: 16 }}>
         <button className="options-button is-primary" onClick={handleExport} type="button">
-          导出 JSON
+          导出 .opentab
         </button>
         <button className="options-button" onClick={handleImportClick} type="button">
-          导入 JSON
+          导入 .opentab
         </button>
         <button className="options-button is-danger" onClick={handleReset} type="button">
           清空本地数据
         </button>
       </div>
-      <input hidden onChange={handleImportFile} ref={fileInputRef} type="file" accept=".json,application/json" />
+      <input
+        hidden
+        onChange={handleImportFile}
+        ref={fileInputRef}
+        type="file"
+        accept=".opentab,application/octet-stream,text/plain"
+      />
       <p className="options-help">{status}</p>
     </section>
   )

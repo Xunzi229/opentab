@@ -17,15 +17,12 @@ async function createHeaders() {
   if (!settings.webdavUrl.trim()) {
     throw new Error("请先填写 WebDAV 地址。")
   }
-
   if (!settings.webdavUsername.trim()) {
     throw new Error("请先填写 WebDAV 用户名。")
   }
-
   if (!settings.webdavPassword.trim()) {
     throw new Error("请先填写 WebDAV 密码。")
   }
-
   if (!settings.webdavFilePath.trim()) {
     throw new Error("请先填写 WebDAV 备份路径。")
   }

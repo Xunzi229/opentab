@@ -60,6 +60,7 @@ export function SyncSettingsPage({ settings, onUpdated }: SyncSettingsPageProps)
             {settings?.enableVisitTracking ? "关闭记录" : "开启记录"}
           </button>
         </div>
+
         <div className="options-stack">
           <div>
             <h3>同步提供方</h3>
@@ -82,10 +83,11 @@ export function SyncSettingsPage({ settings, onUpdated }: SyncSettingsPageProps)
             </button>
           </div>
         </div>
+
         <div className="options-stack">
           <div>
             <h3>WebDAV 配置</h3>
-            <p>填写你的 WebDAV 地址、账号和备份路径，供手动上传 / 下载使用。</p>
+            <p>填写你的 WebDAV 地址、账号和备份路径，供手动上传和下载使用。</p>
           </div>
           <input
             className="group-input"

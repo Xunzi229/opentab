@@ -14,23 +14,28 @@ function joinWebdavUrl(baseUrl: string, filePath: string) {
 
 async function createHeaders() {
   const settings = await loadSettings()
-  if (!settings.webdavUrl.trim()) {
+  const webdavUrl = (settings.webdavUrl || "")
+  const webdavUsername = (settings.webdavUsername || "")
+  const webdavPassword = (settings.webdavPassword || "")
+  const webdavFilePath = (settings.webdavFilePath || "")
+
+  if (!webdavUrl.trim()) {
     throw new Error("请先填写 WebDAV 地址。")
   }
-  if (!settings.webdavUsername.trim()) {
+  if (!webdavUsername.trim()) {
     throw new Error("请先填写 WebDAV 用户名。")
   }
-  if (!settings.webdavPassword.trim()) {
+  if (!webdavPassword.trim()) {
     throw new Error("请先填写 WebDAV 密码。")
   }
-  if (!settings.webdavFilePath.trim()) {
+  if (!webdavFilePath.trim()) {
     throw new Error("请先填写 WebDAV 备份路径。")
   }
 
   return {
-    url: joinWebdavUrl(settings.webdavUrl.trim(), settings.webdavFilePath.trim()),
+    url: joinWebdavUrl(webdavUrl.trim(), webdavFilePath.trim()),
     headers: {
-      Authorization: buildAuthorization(settings.webdavUsername.trim(), settings.webdavPassword.trim())
+      Authorization: buildAuthorization(webdavUsername.trim(), webdavPassword.trim())
     }
   }
 }

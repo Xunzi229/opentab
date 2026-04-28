@@ -84,9 +84,14 @@ export async function saveVisits(visits: VisitRecord[]) {
 }
 
 export async function getSettings() {
-  return getStorageValue<AppSettings>(STORAGE_KEYS.settings, {
+  const stored = await getStorageValue<AppSettings>(STORAGE_KEYS.settings, {
     ...DEFAULT_SETTINGS
   } as AppSettings)
+
+  return {
+    ...DEFAULT_SETTINGS,
+    ...stored
+  } as AppSettings
 }
 
 export async function saveSettings(settings: AppSettings) {

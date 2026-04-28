@@ -1,6 +1,7 @@
 import { decodeBackup, encodeBackup } from "../lib/backup"
 import { getAppSnapshot, saveAppSnapshot } from "../repositories/local-repo"
 import { loadSettings } from "./settings-service"
+import type { AppSettings } from "../types/settings"
 
 function buildAuthorization(username: string, password: string) {
   return `Basic ${btoa(`${username}:${password}`)}`
@@ -85,4 +86,157 @@ export async function verifyWebdavConnection() {
   if (!response.ok && response.status !== 404) {
     throw new Error(`WebDAV 连接失败：${response.status} ${response.statusText}`)
   }
+}
+
+export async function uploadFileToWebdav(remotePath: string, content: string, contentType = "application/json", config?: { webdavUrl: string, webdavUsername: string, webdavPassword: string }) {
+  let webdavUrl: string, webdavUsername: string, webdavPassword: string
+
+  if (config) {
+    webdavUrl = config.webdavUrl.trim()
+    webdavUsername = config.webdavUsername.trim()
+    webdavPassword = config.webdavPassword.trim()
+  } else {
+    const settings: AppSettings = await loadSettings()
+    webdavUrl = (settings.webdavUrl || "").trim()
+    webdavUsername = (settings.webdavUsername || "").trim()
+    webdavPassword = (settings.webdavPassword || "").trim()
+  }
+
+  if (!webdavUrl) throw new Error("请先填写 WebDAV 地址。")
+  if (!webdavUsername) throw new Error("请先填写 WebDAV 用户名。")
+  if (!webdavPassword) throw new Error("请先填写 WebDAV 密码。")
+
+  const url = joinWebdavUrl(webdavUrl, remotePath)
+
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: {
+      Authorization: buildAuthorization(webdavUsername, webdavPassword),
+      "Content-Type": contentType
+    },
+    body: content
+  })
+
+  if (!response.ok) {
+    throw new Error(`WebDAV 上传失败：${response.status} ${response.statusText}`)
+  }
+}
+
+export async function deleteFileFromWebdav(remotePath: string, config?: { webdavUrl: string, webdavUsername: string, webdavPassword: string }) {
+  let webdavUrl: string, webdavUsername: string, webdavPassword: string
+
+  if (config) {
+    webdavUrl = config.webdavUrl.trim()
+    webdavUsername = config.webdavUsername.trim()
+    webdavPassword = config.webdavPassword.trim()
+  } else {
+    const settings: AppSettings = await loadSettings()
+    webdavUrl = (settings.webdavUrl || "").trim()
+    webdavUsername = (settings.webdavUsername || "").trim()
+    webdavPassword = (settings.webdavPassword || "").trim()
+  }
+
+  if (!webdavUrl) throw new Error("请先填写 WebDAV 地址。")
+  if (!webdavUsername) throw new Error("请先填写 WebDAV 用户名。")
+  if (!webdavPassword) throw new Error("请先填写 WebDAV 密码。")
+
+  const url = joinWebdavUrl(webdavUrl, remotePath)
+
+  const response = await fetch(url, {
+    method: "DELETE",
+    headers: {
+      Authorization: buildAuthorization(webdavUsername, webdavPassword)
+    }
+  })
+
+  if (!response.ok && response.status !== 404) {
+    throw new Error(`WebDAV 删除失败：${response.status} ${response.statusText}`)
+  }
+}
+
+export async function downloadFileFromWebdav(remotePath: string, config?: { webdavUrl: string, webdavUsername: string, webdavPassword: string }): Promise<string> {
+  let webdavUrl: string, webdavUsername: string, webdavPassword: string
+
+  if (config) {
+    webdavUrl = config.webdavUrl.trim()
+    webdavUsername = config.webdavUsername.trim()
+    webdavPassword = config.webdavPassword.trim()
+  } else {
+    const settings: AppSettings = await loadSettings()
+    webdavUrl = (settings.webdavUrl || "").trim()
+    webdavUsername = (settings.webdavUsername || "").trim()
+    webdavPassword = (settings.webdavPassword || "").trim()
+  }
+
+  if (!webdavUrl) throw new Error("请先填写 WebDAV 地址。")
+  if (!webdavUsername) throw new Error("请先填写 WebDAV 用户名。")
+  if (!webdavPassword) throw new Error("请先填写 WebDAV 密码。")
+
+  const url = joinWebdavUrl(webdavUrl, remotePath)
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: buildAuthorization(webdavUsername, webdavPassword)
+    }
+  })
+
+  if (!response.ok) {
+    throw new Error(`WebDAV 下载失败：${response.status} ${response.statusText}`)
+  }
+
+  return await response.text()
+}
+
+export async function listWebdavFiles(remoteDir: string, config?: { webdavUrl: string, webdavUsername: string, webdavPassword: string }): Promise<string[]> {
+  let webdavUrl: string, webdavUsername: string, webdavPassword: string
+
+  if (config) {
+    webdavUrl = config.webdavUrl.trim()
+    webdavUsername = config.webdavUsername.trim()
+    webdavPassword = config.webdavPassword.trim()
+  } else {
+    const settings: AppSettings = await loadSettings()
+    webdavUrl = (settings.webdavUrl || "").trim()
+    webdavUsername = (settings.webdavUsername || "").trim()
+    webdavPassword = (settings.webdavPassword || "").trim()
+  }
+
+  if (!webdavUrl) throw new Error("请先填写 WebDAV 地址。")
+  if (!webdavUsername) throw new Error("请先填写 WebDAV 用户名。")
+  if (!webdavPassword) throw new Error("请先填写 WebDAV 密码。")
+
+  const url = joinWebdavUrl(webdavUrl, remoteDir)
+
+  const response = await fetch(url, {
+    method: "PROPFIND",
+    headers: {
+      Authorization: buildAuthorization(webdavUsername, webdavPassword),
+      Depth: "1"
+    }
+  })
+
+  if (!response.ok && response.status !== 404) {
+    throw new Error(`WebDAV 列表获取失败：${response.status} ${response.statusText}`)
+  }
+
+  if (response.status === 404) {
+    return []
+  }
+
+  const xml = await response.text()
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(xml, "text/xml")
+  const hrefs = doc.querySelectorAll("d\\:href, href")
+
+  const files: string[] = []
+  hrefs.forEach((href) => {
+    const fullPath = href.textContent || ""
+    const fileName = fullPath.split("/").pop() || ""
+    if (fileName && fileName !== remoteDir) {
+      files.push(fileName)
+    }
+  })
+
+  return files
 }

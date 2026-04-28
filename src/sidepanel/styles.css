@@ -238,6 +238,39 @@
   gap: 10px;
 }
 
+/* Modal overlay and card used by BackupPage WebDAV config */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal-card {
+  background: #fff;
+  padding: 20px;
+  width: 540px;
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(20, 30, 60, 0.12);
+}
+
+.webdav-modal .group-input {
+  display: block;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.webdav-modal h3 {
+  margin-top: 0;
+}
+
+.webdav-modal .route-text-button {
+  min-width: 96px;
+}
+
 .stats-row {
   display: flex;
   align-items: center;

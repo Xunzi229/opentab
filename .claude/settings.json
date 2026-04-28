@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash: npm run build",
+      "Bash: npm run dev",
+      "Bash: npm run preview",
+      "Bash: npm install",
+      "Bash: node scripts/*",
+      "Bash: tsc --noEmit",
+      "Bash: git status",
+      "Bash: git diff",
+      "Bash: git log",
+      "Bash: git add *",
+      "Bash: git commit*",
+      "Bash: git push*",
+      "Bash: git checkout*",
+      "Bash: git branch*",
+      "Bash: git merge*",
+      "Bash: git rebase*",
+      "Bash: git reset*",
+      "Bash: ls",
+      "Bash: cat",
+      "Bash: mkdir*",
+      "Bash: rm*",
+      "Bash: cp*",
+      "Bash: mv*",
+      "Bash: ls -la",
+      "Bash: find *",
+      "Bash: grep *"
+    ]
+  },
+  "projectInstructions": {
+    "additionalClaudeMdPaths": [
+      "CLAUDE.md"
+    ]
+  }
+}

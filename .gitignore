@@ -36,6 +36,9 @@ desktop.ini
 .idea/
 .vscode/
 
+# Claude Code personal config
+.claude/settings.local.json
+
 # Temporary files
 *.tmp
 *.temp

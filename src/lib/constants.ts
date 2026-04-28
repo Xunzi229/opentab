@@ -4,6 +4,7 @@ export const STORAGE_KEYS = {
   tags: "opentab_tags",
   visits: "opentab_visits",
   settings: "opentab_settings"
+  ,webdavConfigs: "opentab_webdav_configs"
 } as const
 
 export const DEFAULT_GROUP_ID = "default"

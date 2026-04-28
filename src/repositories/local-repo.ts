@@ -136,3 +136,28 @@ export async function resetAppSnapshot() {
     settings: { ...DEFAULT_SETTINGS } as AppSettings
   })
 }
+
+export type WebdavConfigVersion = {
+  id: string
+  createdAt: string
+  webdavUrl: string
+  webdavUsername: string
+  webdavPassword: string
+  webdavFilePath: string
+}
+
+export async function getWebdavConfigVersions() {
+  return getStorageValue<WebdavConfigVersion[]>(STORAGE_KEYS.webdavConfigs, [])
+}
+
+export async function saveWebdavConfigVersion(version: WebdavConfigVersion) {
+  const current = await getWebdavConfigVersions()
+  const next = [version, ...current]
+  await setStorageValue(STORAGE_KEYS.webdavConfigs, next)
+}
+
+export async function removeWebdavConfigVersion(id: string) {
+  const current = await getWebdavConfigVersions()
+  const next = current.filter((v) => v.id !== id)
+  await setStorageValue(STORAGE_KEYS.webdavConfigs, next)
+}

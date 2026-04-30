@@ -531,6 +531,77 @@
   border-top: 2px solid #4357ff;
 }
 
+/* RecentPage */
+.recent-page {
+  padding: 18px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.page-header h3 {
+  margin: 0 0 4px;
+}
+
+.page-header-desc {
+  margin: 0;
+  color: #66738f;
+  font-size: 13px;
+}
+
+.clear-btn {
+  flex: 0 0 auto;
+}
+
+.search-input {
+  width: 100%;
+  border: 1px solid #dde4f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.visit-list {
+  display: grid;
+  gap: 10px;
+}
+
+.visit-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid #e7ebf3;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.visit-item-main {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.visit-item-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.visit-item-time {
+  color: #6c7894;
+  font-size: 13px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 @media (max-width: 1100px) {
   .sidepanel-layout {
     grid-template-columns: 1fr;

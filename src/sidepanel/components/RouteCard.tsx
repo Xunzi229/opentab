@@ -20,6 +20,7 @@ type RouteCardProps = {
   onDelete: (routeId: string) => void
   onMoveGroup: (routeId: string, groupId: string) => void
   onEdit: (routeId: string, input: { title: string; url: string; note?: string; tags?: string }) => Promise<void>
+  onRestore: (url: string) => void
 }
 
 export function RouteCard({
@@ -37,7 +38,8 @@ export function RouteCard({
   onToggleStar,
   onDelete,
   onMoveGroup,
-  onEdit
+  onEdit,
+  onRestore
 }: RouteCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [draftTitle, setDraftTitle] = useState(title)
@@ -146,6 +148,9 @@ export function RouteCard({
             编辑
           </button>
         )}
+        <button className="route-text-button restore-btn" onClick={() => onRestore(url)} type="button">
+          恢复
+        </button>
         <button className="route-text-button is-danger" onClick={() => onDelete(id)} type="button">
           删除
         </button>

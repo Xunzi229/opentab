@@ -35,6 +35,9 @@ type GroupSectionProps = {
   onEditRoute: (routeId: string, input: { title: string; url: string; note?: string; tags?: string }) => Promise<void>
   onOpenAllRoutes: (urls: string[]) => Promise<void>
   onAddRoute: (groupId: string, url: string) => Promise<void>
+  onRestoreRoute: (url: string) => void
+  onRestoreAllRoutes: (routes: Array<{ url: string }>) => Promise<void>
+  onDeleteAllRoutes: (routes: Array<{ id: string; url: string }>) => Promise<void>
 }
 
 export function GroupSection({
@@ -56,7 +59,10 @@ export function GroupSection({
   onMoveRouteGroup,
   onEditRoute,
   onOpenAllRoutes,
-  onAddRoute
+  onAddRoute,
+  onRestoreRoute,
+  onRestoreAllRoutes,
+  onDeleteAllRoutes
 }: GroupSectionProps) {
   const [manualUrl, setManualUrl] = useState("")
   const [showManualForm, setShowManualForm] = useState(false)
@@ -108,6 +114,22 @@ export function GroupSection({
           >
             批量打开
           </button>
+          <button
+            className="route-text-button restore-all-btn"
+            disabled={items.length === 0}
+            onClick={() => void onRestoreAllRoutes(items.map((item) => ({ url: item.url })))}
+            type="button"
+          >
+            全部恢复
+          </button>
+          <button
+            className="route-text-button restore-delete-btn"
+            disabled={items.length === 0}
+            onClick={() => void onDeleteAllRoutes(items.map((item) => ({ id: item.id, url: item.url })))}
+            type="button"
+          >
+            恢复并删除
+          </button>
           {!isEditing && (
             <button className="route-text-button" onClick={() => onStartEdit(id, title)} type="button">
               重命名
@@ -154,6 +176,7 @@ export function GroupSection({
             onDelete={onDeleteRoute}
             onEdit={onEditRoute}
             onMoveGroup={onMoveRouteGroup}
+            onRestore={onRestoreRoute}
             onToggleStar={onToggleStar}
             path={item.path}
             starred={item.starred}

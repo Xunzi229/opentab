@@ -3,7 +3,7 @@ import { DEFAULT_GROUP_ID, STORAGE_KEYS } from "../../lib/constants"
 import { createGroup, deleteGroup, getGroupedRoutes, renameGroup } from "../../services/group-service"
 import { listVisits } from "../../services/history-service"
 import { moveRouteToGroup, removeRoute, saveRoute, toggleRouteStar, updateRoute } from "../../services/route-service"
-import { sendAllTabsToGroup } from "../../services/tab-workspace-service"
+import { restoreAllRoutes, restoreRoute, sendAllTabsToGroup } from "../../services/tab-workspace-service"
 import type { VisitRecord } from "../../types/history"
 import { GroupSection } from "../components/GroupSection"
 import { HeroBanner } from "../components/HeroBanner"
@@ -177,6 +177,24 @@ export function DashboardPage() {
     }
   }
 
+  async function handleRestoreRoute(url: string) {
+    await restoreRoute(url)
+    setStatusMessage("已在新标签页恢复。")
+  }
+
+  async function handleRestoreAllRoutes(routes: Array<{ url: string }>) {
+    await restoreAllRoutes(routes)
+    setStatusMessage(`已恢复 ${routes.length} 个路由到新标签页。`)
+  }
+
+  async function handleDeleteAllRoutes(routes: Array<{ id: string; url: string }>) {
+    await restoreAllRoutes(routes)
+    for (const route of routes) {
+      await removeRoute(route.id)
+    }
+    setStatusMessage(`已恢复并删除 ${routes.length} 个路由。`)
+  }
+
   return (
     <section className="page-stack">
       <HeroBanner />
@@ -235,12 +253,15 @@ export function DashboardPage() {
             key={group.id}
             onAddRoute={handleAddRoute}
             onCancelEdit={handleCancelEdit}
+            onDeleteAllRoutes={handleDeleteAllRoutes}
             onDeleteGroup={handleDeleteGroup}
             onDeleteRoute={handleDeleteRoute}
             onEditRoute={handleEditRoute}
             onEditingNameChange={setEditingGroupName}
             onMoveRouteGroup={handleMoveRouteGroup}
             onOpenAllRoutes={handleOpenAllRoutes}
+            onRestoreAllRoutes={handleRestoreAllRoutes}
+            onRestoreRoute={handleRestoreRoute}
             onSaveEdit={handleSaveEdit}
             onStartEdit={handleStartEdit}
             onToggleStar={handleToggleStar}

@@ -192,6 +192,36 @@
   cursor: not-allowed;
 }
 
+.restore-btn {
+  color: #0d7a3e;
+  border-color: #b7e4cd;
+  background: #f0fdf4;
+}
+
+.restore-btn:hover {
+  background: #dcfce7;
+}
+
+.restore-all-btn {
+  color: #0d7a3e;
+  border-color: #b7e4cd;
+  background: #f0fdf4;
+}
+
+.restore-all-btn:hover {
+  background: #dcfce7;
+}
+
+.restore-delete-btn {
+  color: #b45309;
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.restore-delete-btn:hover {
+  background: #fef3c7;
+}
+
 .route-icon-button {
   width: 36px;
   height: 36px;

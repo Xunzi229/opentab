@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { DEFAULT_GROUP_ID, STORAGE_KEYS } from "../../lib/constants"
 import { getGroupedRoutes } from "../../services/group-service"
 import { moveRouteToGroup, removeRoute, toggleRouteStar, updateRoute } from "../../services/route-service"
+import { restoreRoute } from "../../services/tab-workspace-service"
 import { HeroBanner } from "../components/HeroBanner"
 import { RouteCard } from "../components/RouteCard"
 import { SearchBar } from "../components/SearchBar"
@@ -94,6 +95,11 @@ export function AllRoutesPage() {
     setStatusMessage(`已批量打开 ${validUrls.length} 个地址。`)
   }
 
+  async function handleRestoreRoute(url: string) {
+    await restoreRoute(url)
+    setStatusMessage("已在新标签页恢复。")
+  }
+
   return (
     <section className="page-stack">
       <HeroBanner title="全部收藏" description="这里汇总所有分组中的网址，适合全局搜索、批量查看和快速整理。" />
@@ -140,6 +146,7 @@ export function AllRoutesPage() {
                 onDelete={handleDeleteRoute}
                 onEdit={handleEditRoute}
                 onMoveGroup={handleMoveRouteGroup}
+                onRestore={handleRestoreRoute}
                 onToggleStar={handleToggleStar}
                 path={item.path}
                 starred={item.starred}

@@ -147,7 +147,6 @@ export type WebdavConfigVersion = {
   createdAt: string
   webdavUrl: string
   webdavUsername: string
-  webdavPassword: string
   webdavFilePath: string
 }
 

@@ -1,4 +1,5 @@
 import { decodeBackup, encodeBackup } from "../lib/backup"
+import { decryptText } from "../lib/crypto"
 import { getAppBackupArchive, saveAppBackupArchive } from "../repositories/local-repo"
 import { loadSettings } from "./settings-service"
 import type { AppSettings } from "../types/settings"
@@ -75,7 +76,7 @@ async function loadRequiredWebdavConfig(config?: WebdavConfig) {
     const settings: AppSettings = await loadSettings()
     webdavUrl = (settings.webdavUrl || "").trim()
     webdavUsername = (settings.webdavUsername || "").trim()
-    webdavPassword = (settings.webdavPassword || "").trim()
+    webdavPassword = await decryptText(settings.webdavPassword || "")
   }
 
   if (!webdavUrl) {
@@ -95,7 +96,7 @@ async function createHeaders() {
   const settings = await loadSettings()
   const webdavUrl = (settings.webdavUrl || "").trim()
   const webdavUsername = (settings.webdavUsername || "").trim()
-  const webdavPassword = (settings.webdavPassword || "").trim()
+  const webdavPassword = await decryptText(settings.webdavPassword || "")
   const webdavFilePath = (settings.webdavFilePath || "").trim()
 
   if (!webdavUrl) {

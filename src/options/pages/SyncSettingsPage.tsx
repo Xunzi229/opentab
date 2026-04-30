@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { encryptText, decryptText } from "../../lib/crypto"
 import { updateSettings } from "../../services/settings-service"
 import { verifyWebdavConnection } from "../../services/webdav-sync-service"
 import { syncToChrome, syncFromChrome, getChromeSyncStatus } from "../../services/chrome-sync-service"
@@ -13,10 +14,19 @@ export function SyncSettingsPage({ settings, onUpdated }: SyncSettingsPageProps)
   const [status, setStatus] = useState("当前默认使用本地存储，你也可以在这里配置 WebDAV 同步。")
   const [chromeSyncStatus, setChromeSyncStatus] = useState<{ lastSynced: string | null; dataSize: number }>({ lastSynced: null, dataSize: 0 })
   const [syncing, setSyncing] = useState(false)
+  const [displayPassword, setDisplayPassword] = useState("")
 
   useEffect(() => {
     void getChromeSyncStatus().then(setChromeSyncStatus)
   }, [])
+
+  useEffect(() => {
+    if (settings?.webdavPassword) {
+      void decryptText(settings.webdavPassword).then(setDisplayPassword)
+    } else {
+      setDisplayPassword("")
+    }
+  }, [settings?.webdavPassword])
 
   async function handleToggleVisitTracking() {
     if (!settings) {
@@ -185,10 +195,14 @@ export function SyncSettingsPage({ settings, onUpdated }: SyncSettingsPageProps)
           />
           <input
             className="group-input"
-            onChange={(event) => void handleFieldChange("webdavPassword", event.target.value)}
+            onChange={(event) => {
+              const raw = event.target.value
+              setDisplayPassword(raw)
+              void encryptText(raw).then((encrypted) => handleFieldChange("webdavPassword", encrypted))
+            }}
             placeholder="WebDAV 密码"
             type="password"
-            value={settings?.webdavPassword ?? ""}
+            value={displayPassword}
           />
           <input
             className="group-input"

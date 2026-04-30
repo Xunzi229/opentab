@@ -1,5 +1,6 @@
 import { useRef, useState, type ChangeEvent } from "react"
 import { createBackupFilename, decodeBackup, encodeBackup } from "../../lib/backup"
+import { encryptText, decryptText } from "../../lib/crypto"
 import { getAppBackupArchive, saveAppBackupArchive, getWebdavConfigVersions, saveWebdavConfigVersion, removeWebdavConfigVersion, WebdavConfigVersion } from "../../repositories/local-repo"
 import { downloadSnapshotFromWebdav, uploadSnapshotToWebdav, verifyWebdavConnection, uploadFileToWebdav, deleteFileFromWebdav, downloadFileFromWebdav, listWebdavFiles, resolveWebdavConfigDirectory } from "../../services/webdav-sync-service"
 import { loadSettings, updateSettings } from "../../services/settings-service"
@@ -26,11 +27,11 @@ export function BackupPage() {
   const [versions, setVersions] = useState<WebdavConfigVersion[]>([])
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
-  function buildVersionConfig(version: Pick<WebdavConfigVersion, "webdavUrl" | "webdavUsername" | "webdavPassword">) {
+  function buildVersionConfig(version: Pick<WebdavConfigVersion, "webdavUrl" | "webdavUsername" | "webdavFilePath">) {
     return {
       webdavUrl: version.webdavUrl,
       webdavUsername: version.webdavUsername,
-      webdavPassword: version.webdavPassword
+      webdavPassword: webdavPassword
     }
   }
 
@@ -125,9 +126,10 @@ export function BackupPage() {
             disabled={syncing}
             onClick={async () => {
               const settings = await loadSettings()
+              const decryptedPassword = await decryptText(settings?.webdavPassword ?? "")
               setWebdavUrl(settings?.webdavUrl ?? "")
               setWebdavUsername(settings?.webdavUsername ?? "")
-              setWebdavPassword(settings?.webdavPassword ?? "")
+              setWebdavPassword(decryptedPassword)
               setWebdavFilePath(settings?.webdavFilePath ?? "opentab/backup.opentab.zip")
               const vs = await getWebdavConfigVersions()
               setVersions(vs)
@@ -140,9 +142,9 @@ export function BackupPage() {
                 const remoteFiles = await listWebdavFiles(baseDir, {
                   webdavUrl: settings?.webdavUrl || "",
                   webdavUsername: settings?.webdavUsername || "",
-                  webdavPassword: settings?.webdavPassword || ""
+                  webdavPassword: decryptedPassword
                 })
-                // 过滤出完整配置文件（含密码）
+                // 过滤出完整配置文件
                 const fullConfigFiles = remoteFiles.filter(f => f.startsWith("config-") && f.endsWith("-full.json"))
 
                 // 拉取远程完整配置并与本地合并
@@ -152,7 +154,7 @@ export function BackupPage() {
                     const content = await downloadFileFromWebdav(filePath, {
                       webdavUrl: settings?.webdavUrl || "",
                       webdavUsername: settings?.webdavUsername || "",
-                      webdavPassword: settings?.webdavPassword || ""
+                      webdavPassword: decryptedPassword
                     })
                     const remoteConfig: WebdavConfigVersion = JSON.parse(content)
                     const exists = vs.some(v => v.id === remoteConfig.id)
@@ -202,7 +204,7 @@ export function BackupPage() {
                     // persist current settings
                     await updateSettings("webdavUrl", webdavUrl)
                     await updateSettings("webdavUsername", webdavUsername)
-                    await updateSettings("webdavPassword", webdavPassword)
+                    await updateSettings("webdavPassword", await encryptText(webdavPassword))
                     await updateSettings("webdavFilePath", webdavFilePath)
 
                     // create version entry
@@ -212,13 +214,12 @@ export function BackupPage() {
                       createdAt: new Date().toISOString(),
                       webdavUrl,
                       webdavUsername,
-                      webdavPassword,
                       webdavFilePath
                     }
 
                     const dir = resolveWebdavConfigDirectory(webdavFilePath)
 
-                    // 先上传到远程（完整配置，含密码）
+                    // 先上传到远程（完整配置，不含密码）
                     try {
                       const fullPath = `${dir}/config-${id}-full.json`
                       const fullPayload = JSON.stringify(v)
@@ -269,7 +270,7 @@ export function BackupPage() {
                       // ensure latest fields saved for check
                       await updateSettings("webdavUrl", webdavUrl)
                       await updateSettings("webdavUsername", webdavUsername)
-                      await updateSettings("webdavPassword", webdavPassword)
+                      await updateSettings("webdavPassword", await encryptText(webdavPassword))
                       await updateSettings("webdavFilePath", webdavFilePath)
                       await verifyWebdavConnection()
                       setModalStatus("WebDAV 连接检查通过。")
@@ -314,7 +315,7 @@ export function BackupPage() {
                         className="route-text-button"
                         onClick={async () => {
                           try {
-                            // 尝试从远程拉取完整配置（包括密码）
+                            // 尝试从远程拉取完整配置
                             const vDir = resolveWebdavConfigDirectory(ver.webdavFilePath)
                             const remotePath = `${vDir}/config-${ver.id}-full.json`
 
@@ -324,18 +325,17 @@ export function BackupPage() {
                               // 尝试从远程拉取完整配置
                               const content = await downloadFileFromWebdav(remotePath, buildVersionConfig(ver))
                               fullConfig = JSON.parse(content)
-                              setModalStatus("已从远程加载完整配置（含密码）。")
+                              setModalStatus("已从远程加载完整配置。")
                             } catch (e) {
                               console.warn("Failed to load full config from remote, using local:", e)
                               // 远程拉取失败，使用本地配置
                               fullConfig = ver
-                              setModalStatus("远程拉取失败，已加载本地配置（密码可能为空）。")
+                              setModalStatus("远程拉取失败，已加载本地配置。")
                             }
 
                             // restore this version into fields
                             setWebdavUrl(fullConfig.webdavUrl)
                             setWebdavUsername(fullConfig.webdavUsername)
-                            setWebdavPassword(fullConfig.webdavPassword)
                             setWebdavFilePath(fullConfig.webdavFilePath)
                           } catch (err) {
                             console.error(err)
@@ -363,7 +363,7 @@ export function BackupPage() {
                             }
 
                             try {
-                              // 删除完整配置文件（含密码）
+                              // 删除完整配置文件
                               const fullPath = `${dDir}/config-${ver.id}-full.json`
                               await deleteFileFromWebdav(fullPath, buildVersionConfig(ver))
                             } catch (e) {

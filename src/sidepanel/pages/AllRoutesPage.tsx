@@ -10,7 +10,12 @@ import { ViewToggle } from "../components/ViewToggle"
 
 type GroupedRoutes = Awaited<ReturnType<typeof getGroupedRoutes>>
 
-export function AllRoutesPage() {
+type AllRoutesPageProps = {
+  viewMode: "grid" | "list"
+  onViewModeChange: (mode: "grid" | "list") => void
+}
+
+export function AllRoutesPage({ viewMode, onViewModeChange }: AllRoutesPageProps) {
   const [searchText, setSearchText] = useState("")
   const [groups, setGroups] = useState<GroupedRoutes>([])
   const [statusMessage, setStatusMessage] = useState("这里会汇总所有分组中的收藏。")
@@ -110,7 +115,7 @@ export function AllRoutesPage() {
         </div>
         <div className="dashboard-toolbar">
           <SearchBar value={searchText} onChange={setSearchText} />
-          <ViewToggle />
+          <ViewToggle mode={viewMode} onChange={onViewModeChange} />
         </div>
       </header>
       <section className="surface group-section">
@@ -133,7 +138,7 @@ export function AllRoutesPage() {
         {filteredItems.length === 0 ? (
           <div className="empty-state">没有匹配的收藏，换个关键词试试。</div>
         ) : (
-          <div className="route-list">
+          <div className={viewMode === "grid" ? "route-list route-grid" : "route-list route-list-view"}>
             {filteredItems.map((item) => (
               <RouteCard
                 groupId={item.groupId}

@@ -13,7 +13,12 @@ import { ViewToggle } from "../components/ViewToggle"
 
 type GroupedRoutes = Awaited<ReturnType<typeof getGroupedRoutes>>
 
-export function DashboardPage() {
+type DashboardPageProps = {
+  viewMode: "grid" | "list"
+  onViewModeChange: (mode: "grid" | "list") => void
+}
+
+export function DashboardPage({ viewMode, onViewModeChange }: DashboardPageProps) {
   const [searchText, setSearchText] = useState("")
   const [newGroupName, setNewGroupName] = useState("")
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null)
@@ -298,7 +303,7 @@ export function DashboardPage() {
         </div>
         <div className="dashboard-toolbar">
           <SearchBar value={searchText} onChange={setSearchText} />
-          <ViewToggle />
+          <ViewToggle mode={viewMode} onChange={onViewModeChange} />
           <button className="route-text-button send-all-tabs-btn" onClick={handleSendAllTabs} type="button">
             收起所有标签
           </button>
@@ -372,6 +377,7 @@ export function DashboardPage() {
               onToggleStar={handleToggleStar}
               pinned={group.pinned}
               title={group.name}
+              viewMode={viewMode}
             />
           </div>
         ))

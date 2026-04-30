@@ -353,6 +353,22 @@
   gap: 10px;
 }
 
+.route-grid {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.route-grid .route-row {
+  margin: 0;
+}
+
+.route-list-view {
+  grid-template-columns: 1fr;
+}
+
+.route-list-view .route-row {
+  margin: 0;
+}
+
 .route-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

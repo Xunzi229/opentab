@@ -44,6 +44,7 @@ type GroupSectionProps = {
   onRestoreAllRoutes: (routes: Array<{ url: string }>) => Promise<void>
   onDeleteAllRoutes: (routes: Array<{ id: string; url: string }>) => Promise<void>
   onDropRoute?: (draggedRouteId: string, targetRouteId: string) => void
+  viewMode?: "grid" | "list"
 }
 
 export function GroupSection({
@@ -73,7 +74,8 @@ export function GroupSection({
   onRestoreRoute,
   onRestoreAllRoutes,
   onDeleteAllRoutes,
-  onDropRoute
+  onDropRoute,
+  viewMode = "list"
 }: GroupSectionProps) {
   const [manualUrl, setManualUrl] = useState("")
   const [showManualForm, setShowManualForm] = useState(false)
@@ -213,7 +215,7 @@ export function GroupSection({
           </button>
         </div>
       ) : null}
-      <div className="route-list">
+      <div className={viewMode === "grid" ? "route-list route-grid" : "route-list route-list-view"}>
         {items.map((item) => (
           <RouteCard
             groupId={item.groupId}

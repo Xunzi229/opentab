@@ -20,6 +20,8 @@ type GroupSectionProps = {
     visitCount: number
     starred: boolean
     groupId?: string
+    environments?: import("../../types/route").Environment[]
+    activeEnv?: string
   }>
   groups: Array<{
     id: string
@@ -44,6 +46,7 @@ type GroupSectionProps = {
   onRestoreAllRoutes: (routes: Array<{ url: string }>) => Promise<void>
   onDeleteAllRoutes: (routes: Array<{ id: string; url: string }>) => Promise<void>
   onDropRoute?: (draggedRouteId: string, targetRouteId: string) => void
+  onEnvChange?: (routeId: string, envName: string) => void
   viewMode?: "grid" | "list"
 }
 
@@ -75,6 +78,7 @@ export function GroupSection({
   onRestoreAllRoutes,
   onDeleteAllRoutes,
   onDropRoute,
+  onEnvChange,
   viewMode = "list"
 }: GroupSectionProps) {
   const [manualUrl, setManualUrl] = useState("")
@@ -218,6 +222,8 @@ export function GroupSection({
       <div className={viewMode === "grid" ? "route-list route-grid" : "route-list route-list-view"}>
         {items.map((item) => (
           <RouteCard
+            activeEnv={item.activeEnv}
+            environments={item.environments}
             groupId={item.groupId}
             groups={groups}
             id={item.id}
@@ -228,6 +234,7 @@ export function GroupSection({
             onDelete={onDeleteRoute}
             onDropRoute={onDropRoute}
             onEdit={onEditRoute}
+            onEnvChange={onEnvChange}
             onMoveGroup={onMoveRouteGroup}
             onRestore={onRestoreRoute}
             onToggleStar={onToggleStar}

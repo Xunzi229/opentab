@@ -219,6 +219,14 @@ export function DashboardPage({ viewMode, onViewModeChange }: DashboardPageProps
     setStatusMessage(`已恢复并删除 ${routes.length} 个路由。`)
   }
 
+  async function handleEnvChange(routeId: string, envName: string) {
+    const allItems = groups.flatMap((group) => group.items)
+    const route = allItems.find((item) => item.id === routeId)
+    if (!route) return
+    await updateRoute(routeId, { title: route.title, url: route.url, activeEnv: envName })
+    setStatusMessage(`环境已切换到 ${envName}。`)
+  }
+
   async function handleDropRoute(draggedRouteId: string, targetRouteId: string) {
     try {
       const targetGroup = groups.find((group) => group.items.some((item) => item.id === targetRouteId))
@@ -373,6 +381,7 @@ export function DashboardPage({ viewMode, onViewModeChange }: DashboardPageProps
               onDeleteRoute={handleDeleteRoute}
               onDropRoute={handleDropRoute}
               onEditRoute={handleEditRoute}
+              onEnvChange={handleEnvChange}
               onEditingNameChange={setEditingGroupName}
               onMoveRouteGroup={handleMoveRouteGroup}
               onOpenAllRoutes={handleOpenAllRoutes}

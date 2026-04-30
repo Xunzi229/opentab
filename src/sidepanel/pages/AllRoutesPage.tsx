@@ -85,6 +85,13 @@ export function AllRoutesPage({ viewMode, onViewModeChange }: AllRoutesPageProps
     setStatusMessage("路由分组已更新。")
   }
 
+  async function handleEnvChange(routeId: string, envName: string) {
+    const route = allItems.find((item) => item.id === routeId)
+    if (!route) return
+    await updateRoute(routeId, { title: route.title, url: route.url, activeEnv: envName })
+    setStatusMessage(`环境已切换到 ${envName}。`)
+  }
+
   async function handleEditRoute(routeId: string, input: { title: string; url: string; note?: string; tags?: string; httpMethod?: string; repoUrl?: string; environments?: import("../../types/route").Environment[] }) {
     try {
       await updateRoute(routeId, input)
@@ -141,6 +148,8 @@ export function AllRoutesPage({ viewMode, onViewModeChange }: AllRoutesPageProps
           <div className={viewMode === "grid" ? "route-list route-grid" : "route-list route-list-view"}>
             {filteredItems.map((item) => (
               <RouteCard
+                activeEnv={item.activeEnv}
+                environments={item.environments}
                 groupId={item.groupId}
                 groups={groupOptions}
                 highlightQuery={searchText}
@@ -151,6 +160,7 @@ export function AllRoutesPage({ viewMode, onViewModeChange }: AllRoutesPageProps
                 tags={item.tags}
                 onDelete={handleDeleteRoute}
                 onEdit={handleEditRoute}
+                onEnvChange={handleEnvChange}
                 onMoveGroup={handleMoveRouteGroup}
                 onRestore={handleRestoreRoute}
                 onToggleStar={handleToggleStar}

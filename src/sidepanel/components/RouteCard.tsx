@@ -40,7 +40,7 @@ type RouteCardProps = {
   onToggleStar: (routeId: string) => void
   onDelete: (routeId: string) => void
   onMoveGroup: (routeId: string, groupId: string) => void
-  onEdit: (routeId: string, input: { title: string; url: string; note?: string; tags?: string }) => Promise<void>
+  onEdit: (routeId: string, input: { title: string; url: string; note?: string; tags?: string; httpMethod?: string; repoUrl?: string; environments?: Environment[] }) => Promise<void>
   onRestore: (url: string) => void
   onDropRoute?: (draggedRouteId: string, targetRouteId: string) => void
   onEnvChange?: (routeId: string, envName: string) => void
@@ -77,6 +77,9 @@ export function RouteCard({
   const [draftUrl, setDraftUrl] = useState(url)
   const [draftNote, setDraftNote] = useState(note ?? "")
   const [draftTags, setDraftTags] = useState(tags.join(", "))
+  const [editHttpMethod, setEditHttpMethod] = useState(httpMethod ?? "GET")
+  const [editRepoUrl, setEditRepoUrl] = useState(repoUrl ?? "")
+  const [editEnvironments, setEditEnvironments] = useState<Environment[]>(environments ?? [])
   const [dragOver, setDragOver] = useState(false)
   const displayPath = useMemo(() => toDisplayRouteText(path, url), [path, url])
   const faviconUrl = useMemo(() => toFaviconUrl(url, icon), [icon, url])
@@ -118,6 +121,9 @@ export function RouteCard({
     setDraftUrl(url)
     setDraftNote(note ?? "")
     setDraftTags(tags.join(", "))
+    setEditHttpMethod(httpMethod ?? "GET")
+    setEditRepoUrl(repoUrl ?? "")
+    setEditEnvironments(environments ?? [])
     setIsEditing(false)
   }
 
@@ -125,9 +131,11 @@ export function RouteCard({
     await onEdit(id, {
       title: draftTitle,
       url: draftUrl,
-      note: draftNote
-      ,
-      tags: draftTags
+      note: draftNote,
+      tags: draftTags,
+      httpMethod: editHttpMethod,
+      repoUrl: editRepoUrl || undefined,
+      environments: editEnvironments.length > 0 ? editEnvironments : undefined
     })
     setIsEditing(false)
   }
@@ -168,6 +176,31 @@ export function RouteCard({
               placeholder="标签，多个用逗号分隔"
               value={draftTags}
             />
+            <div className="edit-field">
+              <label>HTTP 方法</label>
+              <select value={editHttpMethod} onChange={e => setEditHttpMethod(e.target.value)}>
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="DELETE">DELETE</option>
+                <option value="PATCH">PATCH</option>
+              </select>
+            </div>
+            <div className="edit-field">
+              <label>代码仓库</label>
+              <input value={editRepoUrl} onChange={e => setEditRepoUrl(e.target.value)} placeholder="https://github.com/..." />
+            </div>
+            <div className="edit-field">
+              <label>环境配置</label>
+              {editEnvironments.map((env, i) => (
+                <div key={i} className="env-edit-row">
+                  <input value={env.name} placeholder="名称" onChange={e => { const next = [...editEnvironments]; next[i] = { ...next[i], name: e.target.value }; setEditEnvironments(next) }} />
+                  <input value={env.url} placeholder="URL" onChange={e => { const next = [...editEnvironments]; next[i] = { ...next[i], url: e.target.value }; setEditEnvironments(next) }} />
+                  <button className="remove-env-btn" onClick={() => setEditEnvironments(editEnvironments.filter((_, j) => j !== i))} type="button">x</button>
+                </div>
+              ))}
+              <button className="add-env-btn" onClick={() => setEditEnvironments([...editEnvironments, { name: "", url: "" }])} type="button">+ 添加环境</button>
+            </div>
           </div>
         ) : (
           <div className="route-row-summary">

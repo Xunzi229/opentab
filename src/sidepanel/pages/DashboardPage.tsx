@@ -160,7 +160,7 @@ export function DashboardPage({ viewMode, onViewModeChange }: DashboardPageProps
     setStatusMessage("路由分组已更新。")
   }
 
-  async function handleEditRoute(routeId: string, input: { title: string; url: string; note?: string; tags?: string }) {
+  async function handleEditRoute(routeId: string, input: { title: string; url: string; note?: string; tags?: string; httpMethod?: string; repoUrl?: string; environments?: import("../../types/route").Environment[] }) {
     try {
       await updateRoute(routeId, input)
       setStatusMessage("路由已更新。")

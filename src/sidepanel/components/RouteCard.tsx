@@ -1,6 +1,19 @@
 import { useMemo, useState } from "react"
 import { toDisplayRouteText, toFaviconUrl } from "../../lib/url"
 
+function highlightText(text: string, query: string): React.ReactNode {
+  if (!query) return text
+  const index = text.toLowerCase().indexOf(query.toLowerCase())
+  if (index === -1) return text
+  return (
+    <>
+      {text.slice(0, index)}
+      <mark className="search-highlight">{text.slice(index, index + query.length)}</mark>
+      {text.slice(index + query.length)}
+    </>
+  )
+}
+
 type RouteCardProps = {
   id: string
   title: string
@@ -12,6 +25,7 @@ type RouteCardProps = {
   starred?: boolean
   visitCount?: number
   groupId?: string
+  highlightQuery?: string
   groups: Array<{
     id: string
     name: string
@@ -41,7 +55,8 @@ export function RouteCard({
   onMoveGroup,
   onEdit,
   onRestore,
-  onDropRoute
+  onDropRoute,
+  highlightQuery
 }: RouteCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [draftTitle, setDraftTitle] = useState(title)
@@ -144,7 +159,7 @@ export function RouteCard({
           <div className="route-row-summary">
             <img alt="" className="route-favicon" src={faviconUrl} />
             <a className="route-title-link" href={url} rel="noreferrer" target="_blank" title={title}>
-              {title}
+              {highlightQuery ? highlightText(title, highlightQuery) : title}
             </a>
             <a className="route-link route-link-inline" href={url} rel="noreferrer" target="_blank" title={url}>
               {displayPath}

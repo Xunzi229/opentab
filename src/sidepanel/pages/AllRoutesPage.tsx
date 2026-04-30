@@ -143,6 +143,7 @@ export function AllRoutesPage({ viewMode, onViewModeChange }: AllRoutesPageProps
               <RouteCard
                 groupId={item.groupId}
                 groups={groupOptions}
+                highlightQuery={searchText}
                 icon={item.icon}
                 id={item.id}
                 key={item.id}

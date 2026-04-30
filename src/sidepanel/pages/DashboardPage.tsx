@@ -329,12 +329,20 @@ export function DashboardPage({ viewMode, onViewModeChange }: DashboardPageProps
         </div>
         <p className="dashboard-status">{statusMessage}</p>
       </section>
-      {filteredGroups.length === 0 ? (
+      {groups.length === 0 ? (
+        <section className="surface group-section">
+          <div className="empty-guide">
+            <h3>欢迎使用 OpenTab</h3>
+            <p>开始收藏你的第一个路由吧</p>
+            <p>提示：点击上方"收起所有标签"可以快速保存当前打开的标签页</p>
+          </div>
+        </section>
+      ) : filteredGroups.length === 0 ? (
         <section className="surface group-section">
           <div className="section-head">
             <div>
-              <h3>还没有可展示的收藏</h3>
-              <p>先在 Popup 中收藏当前页面，或者手动输入一个网址试试。</p>
+              <h3>没有匹配的收藏</h3>
+              <p>换个关键词试试。</p>
             </div>
           </div>
         </section>

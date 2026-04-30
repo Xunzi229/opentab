@@ -62,7 +62,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return false
   }
 
-  const { name, routes } = message.data ?? {}
+  const { name, routes } = message.payload ?? {}
   if (!name || !Array.isArray(routes)) {
     sendResponse({ success: false, error: "数据格式无效" })
     return false

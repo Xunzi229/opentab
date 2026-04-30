@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { RouteCard } from "./RouteCard"
+import { ShareDialog } from "./ShareDialog"
 
 type GroupSectionProps = {
   id: string
@@ -76,6 +77,7 @@ export function GroupSection({
 }: GroupSectionProps) {
   const [manualUrl, setManualUrl] = useState("")
   const [showManualForm, setShowManualForm] = useState(false)
+  const [showShare, setShowShare] = useState(false)
   const itemUrls = items.map((item) => item.url)
 
   async function handleAddRoute() {
@@ -170,6 +172,14 @@ export function GroupSection({
               重命名
             </button>
           )}
+          <button
+            className="route-text-button"
+            disabled={items.length === 0}
+            onClick={() => setShowShare(true)}
+            type="button"
+          >
+            分享
+          </button>
           {!isDefault && (
             <button
               className="route-text-button is-danger"
@@ -227,6 +237,13 @@ export function GroupSection({
           />
         ))}
       </div>
+      {showShare && (
+        <ShareDialog
+          groupName={title}
+          routes={items.map((item) => ({ url: item.url, title: item.title, icon: item.icon }))}
+          onClose={() => setShowShare(false)}
+        />
+      )}
     </section>
   )
 }

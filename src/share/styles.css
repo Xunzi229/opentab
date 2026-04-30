@@ -1,0 +1,103 @@
+.share-shell {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  display: grid;
+  gap: 16px;
+}
+
+.share-header {
+  padding: 24px;
+  text-align: center;
+}
+
+.share-title {
+  margin: 0;
+  font-size: 22px;
+}
+
+.share-meta {
+  margin: 6px 0 16px;
+  color: #647089;
+  font-size: 14px;
+}
+
+.share-import-btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 12px 24px;
+  background: #4357ff;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.share-import-btn:hover {
+  background: #3246e6;
+}
+
+.share-status {
+  margin: 12px 0 0;
+  color: #3d7a4a;
+  font-size: 13px;
+}
+
+.share-error {
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.share-error-text {
+  margin: 12px 0 0;
+  color: #73809b;
+  font-size: 14px;
+}
+
+.share-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.share-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.share-favicon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  border-radius: 4px;
+}
+
+.share-list-content {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.share-link-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2a44;
+  text-decoration: none;
+}
+
+.share-link-title:hover {
+  color: #4357ff;
+  text-decoration: underline;
+}
+
+.share-url {
+  font-size: 12px;
+  color: #73809b;
+  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

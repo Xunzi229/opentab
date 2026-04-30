@@ -54,6 +54,7 @@ export default defineConfig({
         manager: resolve(rootDir, "manager.html"),
         sidepanel: resolve(rootDir, "sidepanel.html"),
         options: resolve(rootDir, "options.html"),
+        share: resolve(rootDir, "share.html"),
         background: resolve(rootDir, "src/background/index.ts")
       },
       output: {

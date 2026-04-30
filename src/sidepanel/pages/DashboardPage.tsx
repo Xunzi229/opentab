@@ -3,6 +3,7 @@ import { DEFAULT_GROUP_ID, STORAGE_KEYS } from "../../lib/constants"
 import { createGroup, deleteGroup, getGroupedRoutes, renameGroup } from "../../services/group-service"
 import { listVisits } from "../../services/history-service"
 import { moveRouteToGroup, removeRoute, saveRoute, toggleRouteStar, updateRoute } from "../../services/route-service"
+import { sendAllTabsToGroup } from "../../services/tab-workspace-service"
 import type { VisitRecord } from "../../types/history"
 import { GroupSection } from "../components/GroupSection"
 import { HeroBanner } from "../components/HeroBanner"
@@ -163,6 +164,19 @@ export function DashboardPage() {
     }
   }
 
+  async function handleSendAllTabs() {
+    try {
+      const result = await sendAllTabsToGroup()
+      if (result.savedCount === 0) {
+        setStatusMessage("没有可收起的标签页。")
+      } else {
+        setStatusMessage(`已收起 ${result.savedCount} 个标签页${result.skippedCount > 0 ? `，跳过 ${result.skippedCount} 个` : ""}。`)
+      }
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "收起标签页失败。")
+    }
+  }
+
   return (
     <section className="page-stack">
       <HeroBanner />
@@ -174,6 +188,9 @@ export function DashboardPage() {
         <div className="dashboard-toolbar">
           <SearchBar value={searchText} onChange={setSearchText} />
           <ViewToggle />
+          <button className="route-text-button send-all-tabs-btn" onClick={handleSendAllTabs} type="button">
+            收起所有标签
+          </button>
         </div>
       </header>
       <section className="surface group-section">

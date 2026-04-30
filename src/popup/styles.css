@@ -77,3 +77,12 @@
 .popup-link:hover {
   text-decoration: underline;
 }
+
+.send-all-tabs-btn {
+  white-space: nowrap;
+}
+
+.send-result {
+  color: #3d7a4a;
+  font-size: 13px;
+}

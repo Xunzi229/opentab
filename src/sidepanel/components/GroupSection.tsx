@@ -38,6 +38,7 @@ type GroupSectionProps = {
   onRestoreRoute: (url: string) => void
   onRestoreAllRoutes: (routes: Array<{ url: string }>) => Promise<void>
   onDeleteAllRoutes: (routes: Array<{ id: string; url: string }>) => Promise<void>
+  onDropRoute?: (draggedRouteId: string, targetRouteId: string) => void
 }
 
 export function GroupSection({
@@ -62,7 +63,8 @@ export function GroupSection({
   onAddRoute,
   onRestoreRoute,
   onRestoreAllRoutes,
-  onDeleteAllRoutes
+  onDeleteAllRoutes,
+  onDropRoute
 }: GroupSectionProps) {
   const [manualUrl, setManualUrl] = useState("")
   const [showManualForm, setShowManualForm] = useState(false)
@@ -174,6 +176,7 @@ export function GroupSection({
             note={item.note}
             tags={item.tags}
             onDelete={onDeleteRoute}
+            onDropRoute={onDropRoute}
             onEdit={onEditRoute}
             onMoveGroup={onMoveRouteGroup}
             onRestore={onRestoreRoute}

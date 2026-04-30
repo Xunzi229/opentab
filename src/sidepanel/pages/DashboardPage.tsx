@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { DEFAULT_GROUP_ID, STORAGE_KEYS } from "../../lib/constants"
-import { createGroup, deleteGroup, getGroupedRoutes, renameGroup } from "../../services/group-service"
+import { createGroup, deleteGroup, getGroupedRoutes, reorderGroups, renameGroup } from "../../services/group-service"
 import { listVisits } from "../../services/history-service"
-import { moveRouteToGroup, removeRoute, saveRoute, toggleRouteStar, updateRoute } from "../../services/route-service"
+import { moveRouteToGroup, removeRoute, reorderRoutes, saveRoute, toggleRouteStar, updateRoute } from "../../services/route-service"
 import { restoreAllRoutes, restoreRoute, sendAllTabsToGroup } from "../../services/tab-workspace-service"
 import type { VisitRecord } from "../../types/history"
 import { GroupSection } from "../components/GroupSection"
@@ -21,6 +21,7 @@ export function DashboardPage() {
   const [statusMessage, setStatusMessage] = useState("你可以在这里管理分组、路由和最近访问。")
   const [groups, setGroups] = useState<GroupedRoutes>([])
   const [visits, setVisits] = useState<VisitRecord[]>([])
+  const [dragGroupOverId, setDragGroupOverId] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
     const [nextGroups, nextVisits] = await Promise.all([getGroupedRoutes(), listVisits()])
@@ -195,6 +196,80 @@ export function DashboardPage() {
     setStatusMessage(`已恢复并删除 ${routes.length} 个路由。`)
   }
 
+  async function handleDropRoute(draggedRouteId: string, targetRouteId: string) {
+    try {
+      const targetGroup = groups.find((group) => group.items.some((item) => item.id === targetRouteId))
+      if (!targetGroup) return
+
+      const orderedIds = targetGroup.items.map((item) => item.id)
+      const fromIndex = orderedIds.indexOf(draggedRouteId)
+      const toIndex = orderedIds.indexOf(targetRouteId)
+
+      if (fromIndex === -1) {
+        // dragged route is from another group — move it into this group first
+        await moveRouteToGroup(draggedRouteId, targetGroup.id)
+        // reload to get updated item list
+        const refreshed = await getGroupedRoutes()
+        const refreshedGroup = refreshed.find((g) => g.id === targetGroup.id)
+        if (!refreshedGroup) return
+        const ids = refreshedGroup.items.map((item) => item.id)
+        const targetIdx = ids.indexOf(targetRouteId)
+        const dragIdx = ids.indexOf(draggedRouteId)
+        if (dragIdx !== -1 && targetIdx !== -1) {
+          ids.splice(dragIdx, 1)
+          ids.splice(targetIdx, 0, draggedRouteId)
+          await reorderRoutes(targetGroup.id, ids)
+        }
+      } else {
+        orderedIds.splice(fromIndex, 1)
+        orderedIds.splice(toIndex, 0, draggedRouteId)
+        await reorderRoutes(targetGroup.id, orderedIds)
+      }
+
+      setStatusMessage("路由排序已更新。")
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "路由排序失败。")
+    }
+  }
+
+  function handleGroupDragStart(e: React.DragEvent, groupId: string) {
+    e.dataTransfer.setData("application/opentab-group", groupId)
+    e.dataTransfer.effectAllowed = "move"
+  }
+
+  function handleGroupDragOver(e: React.DragEvent, groupId: string) {
+    if (e.dataTransfer.types.includes("application/opentab-group")) {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = "move"
+      setDragGroupOverId(groupId)
+    }
+  }
+
+  function handleGroupDragLeave() {
+    setDragGroupOverId(null)
+  }
+
+  async function handleGroupDrop(e: React.DragEvent, targetGroupId: string) {
+    e.preventDefault()
+    setDragGroupOverId(null)
+    const draggedGroupId = e.dataTransfer.getData("application/opentab-group")
+    if (!draggedGroupId || draggedGroupId === targetGroupId) return
+
+    try {
+      const orderedIds = groups.map((group) => group.id)
+      const fromIndex = orderedIds.indexOf(draggedGroupId)
+      const toIndex = orderedIds.indexOf(targetGroupId)
+      if (fromIndex === -1 || toIndex === -1) return
+
+      orderedIds.splice(fromIndex, 1)
+      orderedIds.splice(toIndex, 0, draggedGroupId)
+      await reorderGroups(orderedIds)
+      setStatusMessage("分组排序已更新。")
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "分组排序失败。")
+    }
+  }
+
   return (
     <section className="page-stack">
       <HeroBanner />
@@ -242,31 +317,41 @@ export function DashboardPage() {
         </section>
       ) : (
         filteredGroups.map((group) => (
-          <GroupSection
-            description={`${group.count} 条路由`}
-            editingName={editingGroupName}
-            groups={groupOptions}
-            id={group.id}
-            isDefault={group.id === DEFAULT_GROUP_ID}
-            isEditing={editingGroupId === group.id}
-            items={group.items}
+          <div
+            className={`group-section-wrapper${dragGroupOverId === group.id ? " group-drag-over" : ""}`}
+            draggable
             key={group.id}
-            onAddRoute={handleAddRoute}
-            onCancelEdit={handleCancelEdit}
-            onDeleteAllRoutes={handleDeleteAllRoutes}
-            onDeleteGroup={handleDeleteGroup}
-            onDeleteRoute={handleDeleteRoute}
-            onEditRoute={handleEditRoute}
-            onEditingNameChange={setEditingGroupName}
-            onMoveRouteGroup={handleMoveRouteGroup}
-            onOpenAllRoutes={handleOpenAllRoutes}
-            onRestoreAllRoutes={handleRestoreAllRoutes}
-            onRestoreRoute={handleRestoreRoute}
-            onSaveEdit={handleSaveEdit}
-            onStartEdit={handleStartEdit}
-            onToggleStar={handleToggleStar}
-            title={group.name}
-          />
+            onDragLeave={handleGroupDragLeave}
+            onDragOver={(e) => handleGroupDragOver(e, group.id)}
+            onDragStart={(e) => handleGroupDragStart(e, group.id)}
+            onDrop={(e) => void handleGroupDrop(e, group.id)}
+          >
+            <GroupSection
+              description={`${group.count} 条路由`}
+              editingName={editingGroupName}
+              groups={groupOptions}
+              id={group.id}
+              isDefault={group.id === DEFAULT_GROUP_ID}
+              isEditing={editingGroupId === group.id}
+              items={group.items}
+              onAddRoute={handleAddRoute}
+              onCancelEdit={handleCancelEdit}
+              onDeleteAllRoutes={handleDeleteAllRoutes}
+              onDeleteGroup={handleDeleteGroup}
+              onDeleteRoute={handleDeleteRoute}
+              onDropRoute={handleDropRoute}
+              onEditRoute={handleEditRoute}
+              onEditingNameChange={setEditingGroupName}
+              onMoveRouteGroup={handleMoveRouteGroup}
+              onOpenAllRoutes={handleOpenAllRoutes}
+              onRestoreAllRoutes={handleRestoreAllRoutes}
+              onRestoreRoute={handleRestoreRoute}
+              onSaveEdit={handleSaveEdit}
+              onStartEdit={handleStartEdit}
+              onToggleStar={handleToggleStar}
+              title={group.name}
+            />
+          </div>
         ))
       )}
       <RecentTable rows={visits} />

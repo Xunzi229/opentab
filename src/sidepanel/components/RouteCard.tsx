@@ -21,6 +21,7 @@ type RouteCardProps = {
   onMoveGroup: (routeId: string, groupId: string) => void
   onEdit: (routeId: string, input: { title: string; url: string; note?: string; tags?: string }) => Promise<void>
   onRestore: (url: string) => void
+  onDropRoute?: (draggedRouteId: string, targetRouteId: string) => void
 }
 
 export function RouteCard({
@@ -39,15 +40,49 @@ export function RouteCard({
   onDelete,
   onMoveGroup,
   onEdit,
-  onRestore
+  onRestore,
+  onDropRoute
 }: RouteCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [draftTitle, setDraftTitle] = useState(title)
   const [draftUrl, setDraftUrl] = useState(url)
   const [draftNote, setDraftNote] = useState(note ?? "")
   const [draftTags, setDraftTags] = useState(tags.join(", "))
+  const [dragOver, setDragOver] = useState(false)
   const displayPath = useMemo(() => toDisplayRouteText(path, url), [path, url])
   const faviconUrl = useMemo(() => toFaviconUrl(url, icon), [icon, url])
+
+  function handleDragStart(e: React.DragEvent) {
+    e.dataTransfer.setData("application/opentab-route", JSON.stringify({ routeId: id, groupId }))
+    e.dataTransfer.effectAllowed = "move"
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    if (e.dataTransfer.types.includes("application/opentab-route")) {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = "move"
+      setDragOver(true)
+    }
+  }
+
+  function handleDragLeave() {
+    setDragOver(false)
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setDragOver(false)
+    const raw = e.dataTransfer.getData("application/opentab-route")
+    if (!raw || !onDropRoute) return
+    try {
+      const { routeId: draggedRouteId } = JSON.parse(raw) as { routeId: string; groupId: string }
+      if (draggedRouteId !== id) {
+        onDropRoute(draggedRouteId, id)
+      }
+    } catch {
+      // ignore malformed drag data
+    }
+  }
 
   function handleCancelEdit() {
     setDraftTitle(title)
@@ -69,7 +104,14 @@ export function RouteCard({
   }
 
   return (
-    <article className="route-row">
+    <article
+      className={`route-row${dragOver ? " drag-over" : ""}`}
+      draggable
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <div className="route-row-main">
         {isEditing ? (
           <div className="route-edit-grid">

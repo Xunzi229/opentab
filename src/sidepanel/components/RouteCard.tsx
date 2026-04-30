@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react"
+import { toCurl, toFetch, toRepoDisplayName } from "../../lib/env-utils"
 import { toDisplayRouteText, toFaviconUrl } from "../../lib/url"
+import type { Environment } from "../../types/route"
 
 function highlightText(text: string, query: string): React.ReactNode {
   if (!query) return text
@@ -26,6 +28,11 @@ type RouteCardProps = {
   visitCount?: number
   groupId?: string
   highlightQuery?: string
+  environments?: Environment[]
+  activeEnv?: string
+  repoUrl?: string
+  httpMethod?: string
+  headers?: Record<string, string>
   groups: Array<{
     id: string
     name: string
@@ -36,6 +43,7 @@ type RouteCardProps = {
   onEdit: (routeId: string, input: { title: string; url: string; note?: string; tags?: string }) => Promise<void>
   onRestore: (url: string) => void
   onDropRoute?: (draggedRouteId: string, targetRouteId: string) => void
+  onEnvChange?: (routeId: string, envName: string) => void
 }
 
 export function RouteCard({
@@ -50,12 +58,18 @@ export function RouteCard({
   visitCount = 0,
   groupId,
   groups,
+  environments,
+  activeEnv,
+  repoUrl,
+  httpMethod,
+  headers,
   onToggleStar,
   onDelete,
   onMoveGroup,
   onEdit,
   onRestore,
   onDropRoute,
+  onEnvChange,
   highlightQuery
 }: RouteCardProps) {
   const [isEditing, setIsEditing] = useState(false)
@@ -168,6 +182,24 @@ export function RouteCard({
             {note ? <span className="route-row-note" title={note}>{note}</span> : null}
             {tags.length > 0 ? <span className="route-row-note" title={tags.join(", ")}>#{tags.join(" #")}</span> : null}
             {starred ? <span className="route-badge">已星标</span> : null}
+            {environments && environments.length > 0 && (
+              <div className="env-tags">
+                {environments.map(env => (
+                  <button
+                    key={env.name}
+                    className={`env-tag${env.name === activeEnv ? " active" : ""}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onEnvChange?.(id, env.name)
+                    }}
+                    title={env.url}
+                    type="button"
+                  >
+                    {env.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -191,6 +223,42 @@ export function RouteCard({
             </option>
           ))}
         </select>
+        <button
+          className="route-action-btn dev-btn"
+          title="复制 cURL"
+          onClick={(e) => {
+            e.stopPropagation()
+            const curl = toCurl(url, httpMethod, headers)
+            void navigator.clipboard.writeText(curl)
+          }}
+          type="button"
+        >
+          {"{}"}
+        </button>
+        <button
+          className="route-action-btn dev-btn"
+          title="复制 fetch"
+          onClick={(e) => {
+            e.stopPropagation()
+            const code = toFetch(url, httpMethod, headers)
+            void navigator.clipboard.writeText(code)
+          }}
+          type="button"
+        >
+          fn
+        </button>
+        {repoUrl && (
+          <a
+            className="route-action-btn dev-btn"
+            href={repoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`仓库: ${toRepoDisplayName(repoUrl)}`}
+            onClick={e => e.stopPropagation()}
+          >
+            {"</>"}
+          </a>
+        )}
         {isEditing ? (
           <>
             <button className="route-text-button is-primary" onClick={handleSaveEdit} type="button">

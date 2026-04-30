@@ -707,6 +707,54 @@
   border-radius: 2px;
 }
 
+.env-tags {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.env-tag {
+  padding: 2px 8px;
+  font-size: 11px;
+  border: 1px solid #e8eaed;
+  border-radius: 10px;
+  background: #f8f9fa;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.env-tag:hover {
+  border-color: #1a73e8;
+  color: #1a73e8;
+}
+
+.env-tag.active {
+  background: #e8f0fe;
+  border-color: #1a73e8;
+  color: #1a73e8;
+  font-weight: 500;
+}
+
+.route-action-btn.dev-btn {
+  font-size: 11px;
+  font-family: monospace;
+  color: #5f6368;
+  border: 1px solid #dde4f0;
+  border-radius: 8px;
+  background: #fff;
+  padding: 6px 8px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.route-action-btn.dev-btn:hover {
+  color: #1a73e8;
+  border-color: #1a73e8;
+}
+
 .empty-guide {
   text-align: center;
   padding: 48px 24px;

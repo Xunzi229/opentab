@@ -25,7 +25,16 @@ function createManifest(version) {
     side_panel: {
       default_path: "sidepanel.html"
     },
-    host_permissions: ["<all_urls>"]
+    host_permissions: ["<all_urls>"],
+    commands: {
+      "send-all-tabs": {
+        suggested_key: {
+          default: "Ctrl+Shift+S",
+          mac: "Command+Shift+S"
+        },
+        description: "收起所有标签页"
+      }
+    }
   }
 }
 

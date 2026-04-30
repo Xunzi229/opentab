@@ -57,6 +57,13 @@ chrome.tabs.onUpdated.addListener((_tabId, changeInfo) => {
   }
 })
 
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command === "send-all-tabs") {
+    const { sendAllTabsToGroup } = await import("../services/tab-workspace-service")
+    await sendAllTabsToGroup()
+  }
+})
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type !== "IMPORT_SHARED_GROUP") {
     return false

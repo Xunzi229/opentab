@@ -26,6 +26,11 @@ export async function listGroups() {
 export async function getGroupedRoutes() {
   const [groups, routes, visits] = await Promise.all([listGroups(), getRoutes(), getVisits()])
   const safeGroups = groups.length > 0 ? groups : [...DEFAULT_GROUPS]
+  safeGroups.sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1
+    if (!a.pinned && b.pinned) return 1
+    return a.sort - b.sort
+  })
   const weeklyVisitCountByRouteId = visits.reduce<Record<string, number>>((accumulator, visit) => {
     if (!visit.routeId || !isWithinLastDays(visit.visitedAt, 7)) {
       return accumulator
@@ -95,6 +100,12 @@ export async function createGroup(name: string) {
 
 export async function renameGroup(groupId: string, name: string) {
   const groups = await ensureDefaultGroups()
+  const group = groups.find((g) => g.id === groupId)
+  if (!group) return
+  if (group.isLocked) {
+    throw new Error("锁定的分组不可重命名")
+  }
+
   const trimmedName = name.trim()
   if (!trimmedName) {
     throw new Error("分组名称不能为空")
@@ -121,7 +132,14 @@ export async function deleteGroup(groupId: string) {
     throw new Error("默认分组不能删除")
   }
 
-  const [groups, routes] = await Promise.all([ensureDefaultGroups(), getRoutes()])
+  const groups = await ensureDefaultGroups()
+  const group = groups.find((g) => g.id === groupId)
+  if (!group) return
+  if (group.isLocked) {
+    throw new Error("锁定的分组不可删除")
+  }
+
+  const routes = await getRoutes()
   const nextGroups = groups.filter((group) => group.id !== groupId)
   const timestamp = nowIsoString()
   const nextRoutes = routes.map((route) =>
@@ -135,4 +153,35 @@ export async function deleteGroup(groupId: string) {
   )
 
   await Promise.all([saveGroups(nextGroups), saveRoutes(nextRoutes)])
+}
+
+export async function toggleGroupLock(groupId: string) {
+  const groups = await getGroups()
+  const group = groups.find((g) => g.id === groupId)
+  if (!group) return
+  group.isLocked = !group.isLocked
+  group.updatedAt = nowIsoString()
+  await saveGroups(groups)
+}
+
+export async function toggleGroupPin(groupId: string) {
+  const groups = await getGroups()
+  const group = groups.find((g) => g.id === groupId)
+  if (!group) return
+  group.pinned = !group.pinned
+  group.updatedAt = nowIsoString()
+  await saveGroups(groups)
+}
+
+export async function reorderGroups(orderedIds: string[]) {
+  const groups = await getGroups()
+  const timestamp = nowIsoString()
+  orderedIds.forEach((id, index) => {
+    const group = groups.find((g) => g.id === id)
+    if (group) {
+      group.sort = index
+      group.updatedAt = timestamp
+    }
+  })
+  await saveGroups(groups)
 }

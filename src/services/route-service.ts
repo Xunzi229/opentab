@@ -64,7 +64,8 @@ export async function saveRoute(input: SaveRouteInput) {
     starred: false,
     createdAt: timestamp,
     updatedAt: timestamp,
-    visitCount: 0
+    visitCount: 0,
+    sortOrder: Date.now()
   }
 
   const nextRoutes = [route, ...routes]
@@ -74,7 +75,12 @@ export async function saveRoute(input: SaveRouteInput) {
 
 export async function listRoutes() {
   const routes = await getRoutes()
-  return routes.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+  return routes.sort((left, right) => {
+    const leftOrder = left.sortOrder ?? Number.MAX_SAFE_INTEGER
+    const rightOrder = right.sortOrder ?? Number.MAX_SAFE_INTEGER
+    if (leftOrder !== rightOrder) return leftOrder - rightOrder
+    return left.createdAt.localeCompare(right.createdAt)
+  })
 }
 
 export async function removeRoute(routeId: string) {
@@ -147,6 +153,18 @@ export async function updateRoute(
         }
       : route
   )
+
+  await saveRoutes(nextRoutes)
+}
+
+export async function reorderRoutes(groupId: string, orderedRouteIds: string[]) {
+  const routes = await getRoutes()
+  const orderMap = new Map(orderedRouteIds.map((id, index) => [id, index]))
+  const nextRoutes = routes.map((route) => {
+    const order = orderMap.get(route.id)
+    if (order === undefined) return route
+    return { ...route, sortOrder: order, updatedAt: nowIsoString() }
+  })
 
   await saveRoutes(nextRoutes)
 }

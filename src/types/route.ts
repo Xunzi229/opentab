@@ -13,4 +13,5 @@ export type RouteItem = {
   updatedAt: string
   lastVisitedAt?: string
   visitCount: number
+  sortOrder?: number
 }

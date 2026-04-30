@@ -15,15 +15,12 @@ export type AppSnapshot = {
   settings: AppSettings
 }
 
-function normalizeRouteItem(route: RouteItem) {
-  if (!route.path || route.path === "/") {
-    return {
-      ...route,
-      path: toRoutePath(route.url)
-    }
+function normalizeRouteItem(route: RouteItem, index: number) {
+  return {
+    ...route,
+    path: (!route.path || route.path === "/") ? toRoutePath(route.url) : route.path,
+    sortOrder: route.sortOrder ?? index
   }
-
-  return route
 }
 
 function normalizeVisitRecord(visit: VisitRecord) {

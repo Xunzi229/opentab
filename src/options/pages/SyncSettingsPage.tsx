@@ -1,6 +1,7 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { updateSettings } from "../../services/settings-service"
 import { verifyWebdavConnection } from "../../services/webdav-sync-service"
+import { syncToChrome, syncFromChrome, getChromeSyncStatus } from "../../services/chrome-sync-service"
 import type { AppSettings } from "../../types/settings"
 
 type SyncSettingsPageProps = {
@@ -10,6 +11,12 @@ type SyncSettingsPageProps = {
 
 export function SyncSettingsPage({ settings, onUpdated }: SyncSettingsPageProps) {
   const [status, setStatus] = useState("当前默认使用本地存储，你也可以在这里配置 WebDAV 同步。")
+  const [chromeSyncStatus, setChromeSyncStatus] = useState<{ lastSynced: string | null; dataSize: number }>({ lastSynced: null, dataSize: 0 })
+  const [syncing, setSyncing] = useState(false)
+
+  useEffect(() => {
+    void getChromeSyncStatus().then(setChromeSyncStatus)
+  }, [])
 
   async function handleToggleVisitTracking() {
     if (!settings) {
@@ -39,6 +46,41 @@ export function SyncSettingsPage({ settings, onUpdated }: SyncSettingsPageProps)
       setStatus("WebDAV 连接检查通过。")
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "WebDAV 连接检查失败。")
+    }
+  }
+
+  async function handleSyncToChrome() {
+    setSyncing(true)
+    try {
+      const result = await syncToChrome()
+      if (result.success) {
+        setStatus("数据已推送到 Chrome 云端。")
+      } else {
+        setStatus(`推送失败：${result.error}`)
+      }
+      setChromeSyncStatus(await getChromeSyncStatus())
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "推送失败。")
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  async function handleSyncFromChrome() {
+    setSyncing(true)
+    try {
+      const result = await syncFromChrome()
+      if (result.success) {
+        setStatus("数据已从 Chrome 云端拉取到本地。")
+      } else {
+        setStatus(`拉取失败：${result.error}`)
+      }
+      await onUpdated()
+      setChromeSyncStatus(await getChromeSyncStatus())
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "拉取失败。")
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -75,11 +117,51 @@ export function SyncSettingsPage({ settings, onUpdated }: SyncSettingsPageProps)
               本地
             </button>
             <button
+              className={`options-button${settings?.syncProvider === "chrome-sync" ? " is-primary" : ""}`}
+              onClick={() => void handleProviderChange("chrome-sync")}
+              type="button"
+            >
+              Chrome Sync
+            </button>
+            <button
               className={`options-button${settings?.syncProvider === "webdav" ? " is-primary" : ""}`}
               onClick={() => void handleProviderChange("webdav")}
               type="button"
             >
               WebDAV
+            </button>
+          </div>
+        </div>
+
+        <div className="options-stack">
+          <div>
+            <h3>Chrome Storage Sync</h3>
+            <p>通过 Chrome 账号同步数据到云端，数据上限 80KB，适合少量路由同步。</p>
+          </div>
+          <div className="options-info-row">
+            <span>
+              上次同步：{chromeSyncStatus.lastSynced ? new Date(chromeSyncStatus.lastSynced).toLocaleString() : "从未同步"}
+            </span>
+            <span>
+              数据大小：{chromeSyncStatus.dataSize > 0 ? `${(chromeSyncStatus.dataSize / 1024).toFixed(1)}KB` : "无数据"}
+            </span>
+          </div>
+          <div className="options-actions">
+            <button
+              className="options-button is-primary"
+              disabled={syncing}
+              onClick={handleSyncToChrome}
+              type="button"
+            >
+              {syncing ? "同步中..." : "推送数据到云端"}
+            </button>
+            <button
+              className="options-button"
+              disabled={syncing}
+              onClick={handleSyncFromChrome}
+              type="button"
+            >
+              {syncing ? "同步中..." : "从云端拉取"}
             </button>
           </div>
         </div>

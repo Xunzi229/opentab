@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { DEFAULT_GROUP_ID, STORAGE_KEYS } from "../../lib/constants"
-import { createGroup, deleteGroup, getGroupedRoutes, reorderGroups, renameGroup } from "../../services/group-service"
+import { createGroup, deleteGroup, getGroupedRoutes, reorderGroups, renameGroup, toggleGroupLock, toggleGroupPin } from "../../services/group-service"
 import { listVisits } from "../../services/history-service"
 import { moveRouteToGroup, removeRoute, reorderRoutes, saveRoute, toggleRouteStar, updateRoute } from "../../services/route-service"
 import { restoreAllRoutes, restoreRoute, sendAllTabsToGroup } from "../../services/tab-workspace-service"
@@ -119,6 +119,24 @@ export function DashboardPage() {
       setStatusMessage("分组已删除，原有路由已移动到默认分组。")
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "删除分组失败。")
+    }
+  }
+
+  async function handleToggleLock(groupId: string) {
+    try {
+      await toggleGroupLock(groupId)
+      setStatusMessage("分组锁定状态已更新。")
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "更新锁定状态失败。")
+    }
+  }
+
+  async function handleTogglePin(groupId: string) {
+    try {
+      await toggleGroupPin(groupId)
+      setStatusMessage("分组置顶状态已更新。")
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "更新置顶状态失败。")
     }
   }
 
@@ -333,6 +351,7 @@ export function DashboardPage() {
               id={group.id}
               isDefault={group.id === DEFAULT_GROUP_ID}
               isEditing={editingGroupId === group.id}
+              isLocked={group.isLocked}
               items={group.items}
               onAddRoute={handleAddRoute}
               onCancelEdit={handleCancelEdit}
@@ -348,7 +367,10 @@ export function DashboardPage() {
               onRestoreRoute={handleRestoreRoute}
               onSaveEdit={handleSaveEdit}
               onStartEdit={handleStartEdit}
+              onToggleLock={handleToggleLock}
+              onTogglePin={handleTogglePin}
               onToggleStar={handleToggleStar}
+              pinned={group.pinned}
               title={group.name}
             />
           </div>

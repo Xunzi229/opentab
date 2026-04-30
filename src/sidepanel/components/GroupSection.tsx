@@ -6,6 +6,8 @@ type GroupSectionProps = {
   title: string
   description: string
   isDefault?: boolean
+  isLocked?: boolean
+  pinned?: boolean
   items: Array<{
     id: string
     title: string
@@ -29,6 +31,8 @@ type GroupSectionProps = {
   onCancelEdit: () => void
   onSaveEdit: (groupId: string) => void
   onDeleteGroup: (groupId: string) => void
+  onToggleLock: (groupId: string) => Promise<void>
+  onTogglePin: (groupId: string) => Promise<void>
   onToggleStar: (routeId: string) => void
   onDeleteRoute: (routeId: string) => void
   onMoveRouteGroup: (routeId: string, groupId: string) => void
@@ -46,6 +50,8 @@ export function GroupSection({
   title,
   description,
   isDefault = false,
+  isLocked = false,
+  pinned = false,
   items,
   groups,
   isEditing,
@@ -55,6 +61,8 @@ export function GroupSection({
   onCancelEdit,
   onSaveEdit,
   onDeleteGroup,
+  onToggleLock,
+  onTogglePin,
   onToggleStar,
   onDeleteRoute,
   onMoveRouteGroup,
@@ -100,11 +108,31 @@ export function GroupSection({
               </button>
             </div>
           ) : (
-            <h3>{title}</h3>
+            <h3>
+              {title}
+              {isLocked && <span className="lock-icon" title="已锁定">🔒</span>}
+              {pinned && <span className="pin-icon" title="已置顶">📌</span>}
+            </h3>
           )}
           <p>{description}</p>
         </div>
         <div className="group-actions">
+          <button
+            className={`lock-btn${isLocked ? " locked" : ""}`}
+            onClick={() => void onToggleLock(id)}
+            title={isLocked ? "解锁分组" : "锁定分组"}
+            type="button"
+          >
+            {isLocked ? "🔒" : "🔓"}
+          </button>
+          <button
+            className={`pin-btn${pinned ? " pinned" : ""}`}
+            onClick={() => void onTogglePin(id)}
+            title={pinned ? "取消置顶" : "置顶分组"}
+            type="button"
+          >
+            📌
+          </button>
           <button className="route-text-button" onClick={() => setShowManualForm((value) => !value)} type="button">
             手动添加网址
           </button>
@@ -133,12 +161,22 @@ export function GroupSection({
             恢复并删除
           </button>
           {!isEditing && (
-            <button className="route-text-button" onClick={() => onStartEdit(id, title)} type="button">
+            <button
+              className="route-text-button"
+              disabled={isLocked}
+              onClick={() => onStartEdit(id, title)}
+              type="button"
+            >
               重命名
             </button>
           )}
           {!isDefault && (
-            <button className="route-text-button is-danger" onClick={() => onDeleteGroup(id)} type="button">
+            <button
+              className="route-text-button is-danger"
+              disabled={isLocked}
+              onClick={() => onDeleteGroup(id)}
+              type="button"
+            >
               删除分组
             </button>
           )}

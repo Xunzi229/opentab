@@ -3,7 +3,7 @@ import { findRouteByUrl } from "../lib/dedupe"
 import { nowIsoString } from "../lib/time"
 import { isSupportedRouteUrl, toRoutePath } from "../lib/url"
 import { getRoutes, saveRoutes } from "../repositories/local-repo"
-import type { RouteItem } from "../types/route"
+import type { Environment, RouteItem } from "../types/route"
 
 export type SaveRouteInput = {
   title: string
@@ -11,6 +11,11 @@ export type SaveRouteInput = {
   path?: string
   icon?: string
   groupId?: string
+  environments?: Environment[]
+  activeEnv?: string
+  repoUrl?: string
+  httpMethod?: string
+  headers?: Record<string, string>
 }
 
 function toFallbackTitle(url: string) {
@@ -44,6 +49,11 @@ export async function saveRoute(input: SaveRouteInput) {
             path: resolvedPath,
             icon: input.icon ?? route.icon,
             groupId: input.groupId ?? route.groupId,
+            environments: input.environments ?? route.environments,
+            activeEnv: input.activeEnv ?? route.activeEnv,
+            repoUrl: input.repoUrl ?? route.repoUrl,
+            httpMethod: input.httpMethod ?? route.httpMethod,
+            headers: input.headers ?? route.headers,
             updatedAt: timestamp
           }
         : route
@@ -65,7 +75,12 @@ export async function saveRoute(input: SaveRouteInput) {
     createdAt: timestamp,
     updatedAt: timestamp,
     visitCount: 0,
-    sortOrder: Date.now()
+    sortOrder: Date.now(),
+    environments: input.environments,
+    activeEnv: input.activeEnv,
+    repoUrl: input.repoUrl,
+    httpMethod: input.httpMethod,
+    headers: input.headers
   }
 
   const nextRoutes = [route, ...routes]
@@ -128,6 +143,11 @@ export async function updateRoute(
     url: string
     note?: string
     tags?: string
+    environments?: Environment[]
+    activeEnv?: string
+    repoUrl?: string
+    httpMethod?: string
+    headers?: Record<string, string>
   }
 ) {
   if (!isSupportedRouteUrl(input.url.trim())) {
@@ -149,6 +169,11 @@ export async function updateRoute(
           path: toRoutePath(input.url.trim() || route.url),
           note: input.note ?? route.note,
           tags: normalizedTags,
+          environments: input.environments ?? route.environments,
+          activeEnv: input.activeEnv ?? route.activeEnv,
+          repoUrl: input.repoUrl ?? route.repoUrl,
+          httpMethod: input.httpMethod ?? route.httpMethod,
+          headers: input.headers ?? route.headers,
           updatedAt: timestamp
         }
       : route

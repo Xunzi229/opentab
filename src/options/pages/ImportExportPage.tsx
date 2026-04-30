@@ -1,13 +1,13 @@
 import { useRef, useState, type ChangeEvent } from "react"
 import { createBackupFilename, decodeBackup, encodeBackup } from "../../lib/backup"
-import { getAppSnapshot, resetAppSnapshot, saveAppSnapshot } from "../../repositories/local-repo"
+import { getAppBackupArchive, resetAppSnapshot, saveAppBackupArchive } from "../../repositories/local-repo"
 
 type ImportExportPageProps = {
   onUpdated: () => Promise<void> | void
 }
 
-function downloadBackupFile(filename: string, content: string) {
-  const blob = new Blob([content], { type: "application/octet-stream" })
+function downloadBackupFile(filename: string, content: ArrayBuffer) {
+  const blob = new Blob([content], { type: "application/zip" })
   const url = URL.createObjectURL(blob)
   const link = document.createElement("a")
   link.href = url
@@ -17,14 +17,14 @@ function downloadBackupFile(filename: string, content: string) {
 }
 
 export function ImportExportPage({ onUpdated }: ImportExportPageProps) {
-  const [status, setStatus] = useState("你可以导出当前本地数据，也可以重新导入 .opentab 备份。")
+  const [status, setStatus] = useState("你可以导出当前插件完整数据，也可以重新导入之前的备份压缩包。")
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   async function handleExport() {
-    const snapshot = await getAppSnapshot()
-    const encoded = await encodeBackup(snapshot)
+    const archive = await getAppBackupArchive()
+    const encoded = await encodeBackup(archive)
     downloadBackupFile(createBackupFilename(), encoded)
-    setStatus("已导出本地 .opentab 备份文件。")
+    setStatus("已导出本地插件完整备份压缩包。")
   }
 
   function handleImportClick() {
@@ -38,11 +38,11 @@ export function ImportExportPage({ onUpdated }: ImportExportPageProps) {
     }
 
     try {
-      const raw = await file.text()
-      const snapshot = await decodeBackup(raw)
-      await saveAppSnapshot(snapshot)
+      const raw = await file.arrayBuffer()
+      const archive = await decodeBackup(raw)
+      await saveAppBackupArchive(archive)
 
-      setStatus("导入完成，当前数据已恢复。")
+      setStatus("导入完成，当前插件数据和个人配置已恢复。")
       await onUpdated()
       event.target.value = ""
     } catch (error) {
@@ -60,13 +60,13 @@ export function ImportExportPage({ onUpdated }: ImportExportPageProps) {
   return (
     <section className="surface options-card">
       <h3>导入 / 导出</h3>
-      <p>这里使用压缩编码后的 .opentab 备份格式，避免直接暴露原始 JSON 结构。</p>
+      <p>这里会导出插件完整数据压缩包，包含收藏、分组、标签、访问记录、插件设置和已保存的 WebDAV 配置。</p>
       <div className="options-actions" style={{ marginTop: 16 }}>
         <button className="options-button is-primary" onClick={handleExport} type="button">
-          导出 .opentab
+          导出备份压缩包
         </button>
         <button className="options-button" onClick={handleImportClick} type="button">
-          导入 .opentab
+          导入备份压缩包
         </button>
         <button className="options-button is-danger" onClick={handleReset} type="button">
           清空本地数据
@@ -77,7 +77,7 @@ export function ImportExportPage({ onUpdated }: ImportExportPageProps) {
         onChange={handleImportFile}
         ref={fileInputRef}
         type="file"
-        accept=".opentab,application/octet-stream,text/plain"
+        accept=".opentab,.zip,application/zip,application/octet-stream,text/plain"
       />
       <p className="options-help">{status}</p>
     </section>

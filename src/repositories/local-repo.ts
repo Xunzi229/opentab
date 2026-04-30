@@ -128,12 +128,15 @@ export async function saveAppSnapshot(snapshot: AppSnapshot) {
 }
 
 export async function resetAppSnapshot() {
-  await saveAppSnapshot({
-    routes: [],
-    groups: [...DEFAULT_GROUPS],
-    tags: [],
-    visits: [],
-    settings: { ...DEFAULT_SETTINGS } as AppSettings
+  await saveAppBackupArchive({
+    snapshot: {
+      routes: [],
+      groups: [...DEFAULT_GROUPS],
+      tags: [],
+      visits: [],
+      settings: { ...DEFAULT_SETTINGS } as AppSettings
+    },
+    webdavConfigs: []
   })
 }
 
@@ -144,6 +147,11 @@ export type WebdavConfigVersion = {
   webdavUsername: string
   webdavPassword: string
   webdavFilePath: string
+}
+
+export type AppBackupArchive = {
+  snapshot: AppSnapshot
+  webdavConfigs: WebdavConfigVersion[]
 }
 
 export async function getWebdavConfigVersions() {
@@ -160,4 +168,21 @@ export async function removeWebdavConfigVersion(id: string) {
   const current = await getWebdavConfigVersions()
   const next = current.filter((v) => v.id !== id)
   await setStorageValue(STORAGE_KEYS.webdavConfigs, next)
+}
+
+export async function getAppBackupArchive(): Promise<AppBackupArchive> {
+  const [snapshot, webdavConfigs] = await Promise.all([
+    getAppSnapshot(),
+    getWebdavConfigVersions()
+  ])
+
+  return {
+    snapshot,
+    webdavConfigs
+  }
+}
+
+export async function saveAppBackupArchive(archive: AppBackupArchive) {
+  await saveAppSnapshot(archive.snapshot)
+  await setStorageValue(STORAGE_KEYS.webdavConfigs, archive.webdavConfigs)
 }

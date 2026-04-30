@@ -111,7 +111,7 @@ export function SyncSettingsPage({ settings, onUpdated }: SyncSettingsPageProps)
           <input
             className="group-input"
             onChange={(event) => void handleFieldChange("webdavFilePath", event.target.value)}
-            placeholder="opentab/backup.opentab"
+            placeholder="opentab/backup.opentab.zip"
             value={settings?.webdavFilePath ?? ""}
           />
           <div className="options-actions">

@@ -1,7 +1,13 @@
 import { decodeBackup, encodeBackup } from "../lib/backup"
-import { getAppSnapshot, saveAppSnapshot } from "../repositories/local-repo"
+import { getAppBackupArchive, saveAppBackupArchive } from "../repositories/local-repo"
 import { loadSettings } from "./settings-service"
 import type { AppSettings } from "../types/settings"
+
+type WebdavConfig = {
+  webdavUrl: string
+  webdavUsername: string
+  webdavPassword: string
+}
 
 function buildAuthorization(username: string, password: string) {
   return `Basic ${btoa(`${username}:${password}`)}`
@@ -10,47 +16,160 @@ function buildAuthorization(username: string, password: string) {
 function joinWebdavUrl(baseUrl: string, filePath: string) {
   const normalizedBase = baseUrl.replace(/\/+$/, "")
   const normalizedPath = filePath.replace(/^\/+/, "")
-  return `${normalizedBase}/${normalizedPath}`
+  return normalizedPath ? `${normalizedBase}/${normalizedPath}` : normalizedBase
+}
+
+function normalizeRemotePath(remotePath: string) {
+  return remotePath.trim().replace(/^\/+/, "").replace(/\/+$/, "")
+}
+
+function buildWebdavHeaders(config: WebdavConfig) {
+  return {
+    Authorization: buildAuthorization(config.webdavUsername, config.webdavPassword)
+  }
+}
+
+function getParentDirectory(remotePath: string) {
+  const normalizedPath = normalizeRemotePath(remotePath)
+  if (!normalizedPath.includes("/")) {
+    return ""
+  }
+
+  return normalizedPath.slice(0, normalizedPath.lastIndexOf("/"))
+}
+
+function buildAncestorDirectories(remotePath: string) {
+  const parentDirectory = getParentDirectory(remotePath)
+  if (!parentDirectory) {
+    return []
+  }
+
+  const segments = parentDirectory.split("/").filter(Boolean)
+  return segments.map((_, index) => segments.slice(0, index + 1).join("/"))
+}
+
+export function resolveWebdavConfigDirectory(remotePath: string) {
+  const normalizedPath = normalizeRemotePath(remotePath)
+  if (!normalizedPath) {
+    return ""
+  }
+
+  const lastSegment = normalizedPath.split("/").pop() || ""
+  if (lastSegment.includes(".")) {
+    return getParentDirectory(normalizedPath)
+  }
+
+  return normalizedPath
+}
+
+async function loadRequiredWebdavConfig(config?: WebdavConfig) {
+  let webdavUrl: string
+  let webdavUsername: string
+  let webdavPassword: string
+
+  if (config) {
+    webdavUrl = config.webdavUrl.trim()
+    webdavUsername = config.webdavUsername.trim()
+    webdavPassword = config.webdavPassword.trim()
+  } else {
+    const settings: AppSettings = await loadSettings()
+    webdavUrl = (settings.webdavUrl || "").trim()
+    webdavUsername = (settings.webdavUsername || "").trim()
+    webdavPassword = (settings.webdavPassword || "").trim()
+  }
+
+  if (!webdavUrl) {
+    throw new Error("请先填写 WebDAV 地址。")
+  }
+  if (!webdavUsername) {
+    throw new Error("请先填写 WebDAV 用户名。")
+  }
+  if (!webdavPassword) {
+    throw new Error("请先填写 WebDAV 密码。")
+  }
+
+  return { webdavUrl, webdavUsername, webdavPassword }
 }
 
 async function createHeaders() {
   const settings = await loadSettings()
-  const webdavUrl = (settings.webdavUrl || "")
-  const webdavUsername = (settings.webdavUsername || "")
-  const webdavPassword = (settings.webdavPassword || "")
-  const webdavFilePath = (settings.webdavFilePath || "")
+  const webdavUrl = (settings.webdavUrl || "").trim()
+  const webdavUsername = (settings.webdavUsername || "").trim()
+  const webdavPassword = (settings.webdavPassword || "").trim()
+  const webdavFilePath = (settings.webdavFilePath || "").trim()
 
-  if (!webdavUrl.trim()) {
+  if (!webdavUrl) {
     throw new Error("请先填写 WebDAV 地址。")
   }
-  if (!webdavUsername.trim()) {
+  if (!webdavUsername) {
     throw new Error("请先填写 WebDAV 用户名。")
   }
-  if (!webdavPassword.trim()) {
+  if (!webdavPassword) {
     throw new Error("请先填写 WebDAV 密码。")
   }
-  if (!webdavFilePath.trim()) {
+  if (!webdavFilePath) {
     throw new Error("请先填写 WebDAV 备份路径。")
   }
 
   return {
-    url: joinWebdavUrl(webdavUrl.trim(), webdavFilePath.trim()),
-    headers: {
-      Authorization: buildAuthorization(webdavUsername.trim(), webdavPassword.trim())
+    url: joinWebdavUrl(webdavUrl, webdavFilePath),
+    headers: buildWebdavHeaders({ webdavUrl, webdavUsername, webdavPassword }),
+    config: { webdavUrl, webdavUsername, webdavPassword },
+    filePath: webdavFilePath
+  }
+}
+
+async function ensureRemoteDirectories(remotePath: string, config: WebdavConfig) {
+  const directories = buildAncestorDirectories(remotePath)
+  if (directories.length === 0) {
+    return
+  }
+
+  const headers = buildWebdavHeaders(config)
+
+  for (const directory of directories) {
+    const directoryUrl = joinWebdavUrl(config.webdavUrl, directory)
+    const propfindResponse = await fetch(directoryUrl, {
+      method: "PROPFIND",
+      headers: {
+        ...headers,
+        Depth: "0"
+      }
+    })
+
+    if (propfindResponse.ok) {
+      continue
     }
+
+    if (propfindResponse.status !== 404) {
+      throw new Error(`WebDAV 目录检查失败：${propfindResponse.status} ${propfindResponse.statusText}`)
+    }
+
+    const createResponse = await fetch(directoryUrl, {
+      method: "MKCOL",
+      headers
+    })
+
+    if (createResponse.ok || createResponse.status === 405) {
+      continue
+    }
+
+    throw new Error(`WebDAV 目录创建失败：${createResponse.status} ${createResponse.statusText}`)
   }
 }
 
 export async function uploadSnapshotToWebdav() {
-  const snapshot = await getAppSnapshot()
-  const encoded = await encodeBackup(snapshot)
-  const { url, headers } = await createHeaders()
+  const archive = await getAppBackupArchive()
+  const encoded = await encodeBackup(archive)
+  const { url, headers, config, filePath } = await createHeaders()
+
+  await ensureRemoteDirectories(filePath, config)
 
   const response = await fetch(url, {
     method: "PUT",
     headers: {
       ...headers,
-      "Content-Type": "application/octet-stream"
+      "Content-Type": "application/zip"
     },
     body: encoded
   })
@@ -71,16 +190,19 @@ export async function downloadSnapshotFromWebdav() {
     throw new Error(`WebDAV 下载失败：${response.status} ${response.statusText}`)
   }
 
-  const raw = await response.text()
-  const snapshot = await decodeBackup(raw)
-  await saveAppSnapshot(snapshot)
+  const raw = await response.arrayBuffer()
+  const archive = await decodeBackup(raw)
+  await saveAppBackupArchive(archive)
 }
 
 export async function verifyWebdavConnection() {
   const { url, headers } = await createHeaders()
   const response = await fetch(url, {
-    method: "HEAD",
-    headers
+    method: "PROPFIND",
+    headers: {
+      ...headers,
+      Depth: "0"
+    }
   })
 
   if (!response.ok && response.status !== 404) {
@@ -88,30 +210,17 @@ export async function verifyWebdavConnection() {
   }
 }
 
-export async function uploadFileToWebdav(remotePath: string, content: string, contentType = "application/json", config?: { webdavUrl: string, webdavUsername: string, webdavPassword: string }) {
-  let webdavUrl: string, webdavUsername: string, webdavPassword: string
+export async function uploadFileToWebdav(remotePath: string, content: string, contentType = "application/json", config?: WebdavConfig) {
+  const resolvedConfig = await loadRequiredWebdavConfig(config)
+  const normalizedPath = normalizeRemotePath(remotePath)
+  const url = joinWebdavUrl(resolvedConfig.webdavUrl, normalizedPath)
 
-  if (config) {
-    webdavUrl = config.webdavUrl.trim()
-    webdavUsername = config.webdavUsername.trim()
-    webdavPassword = config.webdavPassword.trim()
-  } else {
-    const settings: AppSettings = await loadSettings()
-    webdavUrl = (settings.webdavUrl || "").trim()
-    webdavUsername = (settings.webdavUsername || "").trim()
-    webdavPassword = (settings.webdavPassword || "").trim()
-  }
-
-  if (!webdavUrl) throw new Error("请先填写 WebDAV 地址。")
-  if (!webdavUsername) throw new Error("请先填写 WebDAV 用户名。")
-  if (!webdavPassword) throw new Error("请先填写 WebDAV 密码。")
-
-  const url = joinWebdavUrl(webdavUrl, remotePath)
+  await ensureRemoteDirectories(normalizedPath, resolvedConfig)
 
   const response = await fetch(url, {
     method: "PUT",
     headers: {
-      Authorization: buildAuthorization(webdavUsername, webdavPassword),
+      ...buildWebdavHeaders(resolvedConfig),
       "Content-Type": contentType
     },
     body: content
@@ -122,31 +231,13 @@ export async function uploadFileToWebdav(remotePath: string, content: string, co
   }
 }
 
-export async function deleteFileFromWebdav(remotePath: string, config?: { webdavUrl: string, webdavUsername: string, webdavPassword: string }) {
-  let webdavUrl: string, webdavUsername: string, webdavPassword: string
-
-  if (config) {
-    webdavUrl = config.webdavUrl.trim()
-    webdavUsername = config.webdavUsername.trim()
-    webdavPassword = config.webdavPassword.trim()
-  } else {
-    const settings: AppSettings = await loadSettings()
-    webdavUrl = (settings.webdavUrl || "").trim()
-    webdavUsername = (settings.webdavUsername || "").trim()
-    webdavPassword = (settings.webdavPassword || "").trim()
-  }
-
-  if (!webdavUrl) throw new Error("请先填写 WebDAV 地址。")
-  if (!webdavUsername) throw new Error("请先填写 WebDAV 用户名。")
-  if (!webdavPassword) throw new Error("请先填写 WebDAV 密码。")
-
-  const url = joinWebdavUrl(webdavUrl, remotePath)
+export async function deleteFileFromWebdav(remotePath: string, config?: WebdavConfig) {
+  const resolvedConfig = await loadRequiredWebdavConfig(config)
+  const url = joinWebdavUrl(resolvedConfig.webdavUrl, normalizeRemotePath(remotePath))
 
   const response = await fetch(url, {
     method: "DELETE",
-    headers: {
-      Authorization: buildAuthorization(webdavUsername, webdavPassword)
-    }
+    headers: buildWebdavHeaders(resolvedConfig)
   })
 
   if (!response.ok && response.status !== 404) {
@@ -154,31 +245,13 @@ export async function deleteFileFromWebdav(remotePath: string, config?: { webdav
   }
 }
 
-export async function downloadFileFromWebdav(remotePath: string, config?: { webdavUrl: string, webdavUsername: string, webdavPassword: string }): Promise<string> {
-  let webdavUrl: string, webdavUsername: string, webdavPassword: string
-
-  if (config) {
-    webdavUrl = config.webdavUrl.trim()
-    webdavUsername = config.webdavUsername.trim()
-    webdavPassword = config.webdavPassword.trim()
-  } else {
-    const settings: AppSettings = await loadSettings()
-    webdavUrl = (settings.webdavUrl || "").trim()
-    webdavUsername = (settings.webdavUsername || "").trim()
-    webdavPassword = (settings.webdavPassword || "").trim()
-  }
-
-  if (!webdavUrl) throw new Error("请先填写 WebDAV 地址。")
-  if (!webdavUsername) throw new Error("请先填写 WebDAV 用户名。")
-  if (!webdavPassword) throw new Error("请先填写 WebDAV 密码。")
-
-  const url = joinWebdavUrl(webdavUrl, remotePath)
+export async function downloadFileFromWebdav(remotePath: string, config?: WebdavConfig): Promise<string> {
+  const resolvedConfig = await loadRequiredWebdavConfig(config)
+  const url = joinWebdavUrl(resolvedConfig.webdavUrl, normalizeRemotePath(remotePath))
 
   const response = await fetch(url, {
     method: "GET",
-    headers: {
-      Authorization: buildAuthorization(webdavUsername, webdavPassword)
-    }
+    headers: buildWebdavHeaders(resolvedConfig)
   })
 
   if (!response.ok) {
@@ -188,30 +261,15 @@ export async function downloadFileFromWebdav(remotePath: string, config?: { webd
   return await response.text()
 }
 
-export async function listWebdavFiles(remoteDir: string, config?: { webdavUrl: string, webdavUsername: string, webdavPassword: string }): Promise<string[]> {
-  let webdavUrl: string, webdavUsername: string, webdavPassword: string
-
-  if (config) {
-    webdavUrl = config.webdavUrl.trim()
-    webdavUsername = config.webdavUsername.trim()
-    webdavPassword = config.webdavPassword.trim()
-  } else {
-    const settings: AppSettings = await loadSettings()
-    webdavUrl = (settings.webdavUrl || "").trim()
-    webdavUsername = (settings.webdavUsername || "").trim()
-    webdavPassword = (settings.webdavPassword || "").trim()
-  }
-
-  if (!webdavUrl) throw new Error("请先填写 WebDAV 地址。")
-  if (!webdavUsername) throw new Error("请先填写 WebDAV 用户名。")
-  if (!webdavPassword) throw new Error("请先填写 WebDAV 密码。")
-
-  const url = joinWebdavUrl(webdavUrl, remoteDir)
+export async function listWebdavFiles(remoteDir: string, config?: WebdavConfig): Promise<string[]> {
+  const resolvedConfig = await loadRequiredWebdavConfig(config)
+  const normalizedDir = normalizeRemotePath(remoteDir)
+  const url = joinWebdavUrl(resolvedConfig.webdavUrl, normalizedDir)
 
   const response = await fetch(url, {
     method: "PROPFIND",
     headers: {
-      Authorization: buildAuthorization(webdavUsername, webdavPassword),
+      ...buildWebdavHeaders(resolvedConfig),
       Depth: "1"
     }
   })
@@ -232,8 +290,10 @@ export async function listWebdavFiles(remoteDir: string, config?: { webdavUrl: s
   const files: string[] = []
   hrefs.forEach((href) => {
     const fullPath = href.textContent || ""
-    const fileName = fullPath.split("/").pop() || ""
-    if (fileName && fileName !== remoteDir) {
+    const decodedPath = decodeURIComponent(fullPath)
+    const normalizedHref = decodedPath.replace(/\/+$/, "")
+    const fileName = normalizedHref.split("/").pop() || ""
+    if (fileName && fileName !== normalizedDir.split("/").pop()) {
       files.push(fileName)
     }
   })

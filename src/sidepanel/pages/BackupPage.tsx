@@ -1,11 +1,11 @@
 import { useRef, useState, type ChangeEvent } from "react"
 import { createBackupFilename, decodeBackup, encodeBackup } from "../../lib/backup"
-import { getAppSnapshot, saveAppSnapshot, getWebdavConfigVersions, saveWebdavConfigVersion, removeWebdavConfigVersion, WebdavConfigVersion } from "../../repositories/local-repo"
-import { downloadSnapshotFromWebdav, uploadSnapshotToWebdav, verifyWebdavConnection, uploadFileToWebdav, deleteFileFromWebdav, downloadFileFromWebdav, listWebdavFiles } from "../../services/webdav-sync-service"
+import { getAppBackupArchive, saveAppBackupArchive, getWebdavConfigVersions, saveWebdavConfigVersion, removeWebdavConfigVersion, WebdavConfigVersion } from "../../repositories/local-repo"
+import { downloadSnapshotFromWebdav, uploadSnapshotToWebdav, verifyWebdavConnection, uploadFileToWebdav, deleteFileFromWebdav, downloadFileFromWebdav, listWebdavFiles, resolveWebdavConfigDirectory } from "../../services/webdav-sync-service"
 import { loadSettings, updateSettings } from "../../services/settings-service"
 
-function downloadBackupFile(filename: string, content: string) {
-  const blob = new Blob([content], { type: "application/octet-stream" })
+function downloadBackupFile(filename: string, content: ArrayBuffer) {
+  const blob = new Blob([content], { type: "application/zip" })
   const url = URL.createObjectURL(blob)
   const link = document.createElement("a")
   link.href = url
@@ -26,11 +26,19 @@ export function BackupPage() {
   const [versions, setVersions] = useState<WebdavConfigVersion[]>([])
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
+  function buildVersionConfig(version: Pick<WebdavConfigVersion, "webdavUrl" | "webdavUsername" | "webdavPassword">) {
+    return {
+      webdavUrl: version.webdavUrl,
+      webdavUsername: version.webdavUsername,
+      webdavPassword: version.webdavPassword
+    }
+  }
+
   async function handleExport() {
-    const snapshot = await getAppSnapshot()
-    const encoded = await encodeBackup(snapshot)
+    const archive = await getAppBackupArchive()
+    const encoded = await encodeBackup(archive)
     downloadBackupFile(createBackupFilename(), encoded)
-    setStatusMessage("导出完成，已生成 .opentab 备份文件。")
+    setStatusMessage("导出完成，已生成插件完整备份压缩包。")
   }
 
   function handleImportClick() {
@@ -44,10 +52,10 @@ export function BackupPage() {
     }
 
     try {
-      const raw = await file.text()
-      const snapshot = await decodeBackup(raw)
-      await saveAppSnapshot(snapshot)
-      setStatusMessage("导入完成，本地数据已恢复。")
+      const raw = await file.arrayBuffer()
+      const archive = await decodeBackup(raw)
+      await saveAppBackupArchive(archive)
+      setStatusMessage("导入完成，本地插件数据和个人配置已恢复。")
       event.target.value = ""
     } catch (error) {
       console.error(error)
@@ -92,13 +100,13 @@ export function BackupPage() {
         </div>
         <div className="group-create-row">
           <button className="route-text-button is-primary" onClick={handleExport} type="button">
-            导出 .opentab 备份
+            导出 zip 备份
           </button>
           <button className="route-text-button" onClick={handleImportClick} type="button">
-            导入 .opentab 备份
+            导入 zip 备份
           </button>
         </div>
-        <input hidden accept=".opentab,application/octet-stream,text/plain" onChange={handleImportFile} ref={fileInputRef} type="file" />
+        <input hidden accept=".opentab,.zip,application/zip,application/octet-stream,text/plain" onChange={handleImportFile} ref={fileInputRef} type="file" />
       </section>
 
       <section className="surface group-section">
@@ -120,7 +128,7 @@ export function BackupPage() {
               setWebdavUrl(settings?.webdavUrl ?? "")
               setWebdavUsername(settings?.webdavUsername ?? "")
               setWebdavPassword(settings?.webdavPassword ?? "")
-              setWebdavFilePath(settings?.webdavFilePath ?? "opentab/backup.opentab")
+              setWebdavFilePath(settings?.webdavFilePath ?? "opentab/backup.opentab.zip")
               const vs = await getWebdavConfigVersions()
               setVersions(vs)
               setModalStatus(null)
@@ -128,9 +136,8 @@ export function BackupPage() {
 
               // 尝试从远程拉取配置版本列表
               try {
-                const fileDir = (settings?.webdavFilePath || "").replace(/\/?[^\/]+$/, "").replace(/^\/+|\/+$/g, "")
-                const remoteDir = fileDir ? `${fileDir}/configs` : `configs`
-                const remoteFiles = await listWebdavFiles(remoteDir, {
+                const baseDir = resolveWebdavConfigDirectory(settings?.webdavFilePath || "")
+                const remoteFiles = await listWebdavFiles(baseDir, {
                   webdavUrl: settings?.webdavUrl || "",
                   webdavUsername: settings?.webdavUsername || "",
                   webdavPassword: settings?.webdavPassword || ""
@@ -141,18 +148,17 @@ export function BackupPage() {
                 // 拉取远程完整配置并与本地合并
                 for (const file of fullConfigFiles) {
                   try {
-                    const content = await downloadFileFromWebdav(`${remoteDir}/${file}`, {
+                    const filePath = baseDir ? `${baseDir}/${file}` : file
+                    const content = await downloadFileFromWebdav(filePath, {
                       webdavUrl: settings?.webdavUrl || "",
                       webdavUsername: settings?.webdavUsername || "",
                       webdavPassword: settings?.webdavPassword || ""
                     })
                     const remoteConfig: WebdavConfigVersion = JSON.parse(content)
-                    // 检查本地是否已存在该配置
                     const exists = vs.some(v => v.id === remoteConfig.id)
                     if (!exists) {
                       await saveWebdavConfigVersion(remoteConfig)
                     } else {
-                      // 如果已存在，更新本地配置为远程的完整版本（含密码）
                       await removeWebdavConfigVersion(remoteConfig.id)
                       await saveWebdavConfigVersion(remoteConfig)
                     }
@@ -186,7 +192,7 @@ export function BackupPage() {
             <input className="group-input" placeholder="https://dav.example.com/remote.php/dav/files/user" value={webdavUrl} onChange={(e) => setWebdavUrl(e.target.value)} />
             <input className="group-input" placeholder="WebDAV 用户名" value={webdavUsername} onChange={(e) => setWebdavUsername(e.target.value)} />
             <input className="group-input" placeholder="WebDAV 密码" type="password" value={webdavPassword} onChange={(e) => setWebdavPassword(e.target.value)} />
-            <input className="group-input" placeholder="opentab/backup.opentab" value={webdavFilePath} onChange={(e) => setWebdavFilePath(e.target.value)} />
+            <input className="group-input" placeholder="opentab/backup.opentab.zip" value={webdavFilePath} onChange={(e) => setWebdavFilePath(e.target.value)} />
 
             <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
               <button
@@ -210,14 +216,13 @@ export function BackupPage() {
                       webdavFilePath
                     }
 
-                    const fileDir = (webdavFilePath || "").replace(/\/?[^\/]+$/, "").replace(/^\/+|\/+$/g, "")
-                    const remoteDir = fileDir ? `${fileDir}/configs` : `configs`
+                    const dir = resolveWebdavConfigDirectory(webdavFilePath)
 
                     // 先上传到远程（完整配置，含密码）
                     try {
-                      const fullPath = `${remoteDir}/config-${id}-full.json`
+                      const fullPath = `${dir}/config-${id}-full.json`
                       const fullPayload = JSON.stringify(v)
-                      await uploadFileToWebdav(fullPath, fullPayload, "application/json")
+                      await uploadFileToWebdav(fullPath, fullPayload, "application/json", buildVersionConfig(v))
                     } catch (e) {
                       console.error("Upload full version to WebDAV failed:", e)
                       throw new Error("远程上传完整配置失败，请检查连接。")
@@ -225,7 +230,7 @@ export function BackupPage() {
 
                     // 再上传公开配置（不含密码）
                     try {
-                      const publicPath = `${remoteDir}/config-${id}.json`
+                      const publicPath = `${dir}/config-${id}.json`
                       const publicPayload = JSON.stringify({
                         id: v.id,
                         createdAt: v.createdAt,
@@ -233,7 +238,7 @@ export function BackupPage() {
                         webdavUsername: v.webdavUsername,
                         webdavFilePath: v.webdavFilePath
                       })
-                      await uploadFileToWebdav(publicPath, publicPayload, "application/json")
+                      await uploadFileToWebdav(publicPath, publicPayload, "application/json", buildVersionConfig(v))
                     } catch (e) {
                       console.error("Upload public version to WebDAV failed:", e)
                       throw new Error("远程上传公开配置失败，请检查连接。")
@@ -310,15 +315,14 @@ export function BackupPage() {
                         onClick={async () => {
                           try {
                             // 尝试从远程拉取完整配置（包括密码）
-                            const fileDir = (ver.webdavFilePath || "").replace(/\/?[^\/]+$/, "").replace(/^\/+|\/+$/g, "")
-                            const remoteDir = fileDir ? `${fileDir}/configs` : `configs`
-                            const remotePath = `${remoteDir}/config-${ver.id}-full.json`
+                            const vDir = resolveWebdavConfigDirectory(ver.webdavFilePath)
+                            const remotePath = `${vDir}/config-${ver.id}-full.json`
 
                             let fullConfig: WebdavConfigVersion
 
                             try {
                               // 尝试从远程拉取完整配置
-                              const content = await downloadFileFromWebdav(remotePath)
+                              const content = await downloadFileFromWebdav(remotePath, buildVersionConfig(ver))
                               fullConfig = JSON.parse(content)
                               setModalStatus("已从远程加载完整配置（含密码）。")
                             } catch (e) {
@@ -347,22 +351,21 @@ export function BackupPage() {
                         onClick={async () => {
                           if (!window.confirm("确认删除该配置版本？此操作不可逆。")) return
                           try {
-                            // 先删除远程文件
-                            const fileDir = (ver.webdavFilePath || "").replace(/\/?[^\/]+$/, "").replace(/^\/+|\/+$/g, "")
-                            const remoteDir = fileDir ? `${fileDir}/configs` : `configs`
+                            const dDir = resolveWebdavConfigDirectory(ver.webdavFilePath)
 
+                            // 先删除远程文件
                             try {
                               // 删除公开配置文件（不含密码）
-                              const publicPath = `${remoteDir}/config-${ver.id}.json`
-                              await deleteFileFromWebdav(publicPath)
+                              const publicPath = `${dDir}/config-${ver.id}.json`
+                              await deleteFileFromWebdav(publicPath, buildVersionConfig(ver))
                             } catch (e) {
                               console.warn("Failed to delete public remote config:", e)
                             }
 
                             try {
                               // 删除完整配置文件（含密码）
-                              const fullPath = `${remoteDir}/config-${ver.id}-full.json`
-                              await deleteFileFromWebdav(fullPath)
+                              const fullPath = `${dDir}/config-${ver.id}-full.json`
+                              await deleteFileFromWebdav(fullPath, buildVersionConfig(ver))
                             } catch (e) {
                               console.warn("Failed to delete full remote config:", e)
                             }

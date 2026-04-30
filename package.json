@@ -1,6 +1,6 @@
 {
   "name": "opentab",
-  "version": "0.1.34",
+  "version": "0.1.47",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "jszip": "^3.10.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

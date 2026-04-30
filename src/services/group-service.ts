@@ -83,6 +83,8 @@ export async function createGroup(name: string) {
     name: trimmedName,
     color: "#5b6fff",
     sort: groups.length,
+    isLocked: false,
+    pinned: false,
     createdAt: timestamp,
     updatedAt: timestamp
   }

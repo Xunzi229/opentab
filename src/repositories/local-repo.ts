@@ -52,8 +52,13 @@ export async function saveRoutes(routes: RouteItem[]) {
   await setStorageValue(STORAGE_KEYS.routes, routes)
 }
 
-export async function getGroups() {
-  return getStorageValue<RouteGroup[]>(STORAGE_KEYS.groups, [...DEFAULT_GROUPS])
+export async function getGroups(): Promise<RouteGroup[]> {
+  const groups = await getStorageValue<RouteGroup[]>(STORAGE_KEYS.groups, [...DEFAULT_GROUPS])
+  return groups.map((g) => ({
+    ...g,
+    isLocked: g.isLocked ?? false,
+    pinned: g.pinned ?? false,
+  }))
 }
 
 export async function saveGroups(groups: RouteGroup[]) {

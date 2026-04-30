@@ -15,6 +15,8 @@ export const DEFAULT_GROUPS = [
     name: "未分组",
     color: "#7c8aa5",
     sort: 0,
+    isLocked: false,
+    pinned: false,
     createdAt: new Date(0).toISOString(),
     updatedAt: new Date(0).toISOString()
   }

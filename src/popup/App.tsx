@@ -98,22 +98,12 @@ export function App() {
               <p className="popup-subtitle">快速收藏当前网址，然后在当前窗口的新标签页里打开管理页。</p>
             </div>
           </div>
-          <button className="popup-settings-button" title="设置" type="button">
+          <button className="popup-settings-button" title="打开管理页面" type="button" onClick={handleOpenManager}>
             ⚙
           </button>
         </header>
 
         <div className="popup-shortcuts">
-          <PopupShortcutCard
-            icon={
-              <svg fill="none" height="32" viewBox="0 0 32 32" width="32">
-                <rect height="20" rx="4" stroke="currentColor" strokeWidth="2.2" width="20" x="6" y="6" />
-                <path d="M6 14h20M14 6v20" stroke="currentColor" strokeWidth="2.2" />
-              </svg>
-            }
-            title="打开管理页面"
-            onClick={handleOpenManager}
-          />
           <PopupShortcutCard
             icon={
               <svg fill="none" height="32" viewBox="0 0 32 32" width="32">

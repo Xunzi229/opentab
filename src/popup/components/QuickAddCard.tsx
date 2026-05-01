@@ -51,7 +51,7 @@ export function QuickAddCard({ onRouteSaved }: QuickAddCardProps) {
           </svg>
         </span>
         <div>
-          <h2 className="popup-title">收藏当前路由</h2>
+          <h2 className="popup-title">收藏当前页面</h2>
           <p className="popup-subtitle">读取当前激活标签页，将页面标题和地址保存到本地收藏。</p>
         </div>
       </div>

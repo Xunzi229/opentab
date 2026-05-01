@@ -1548,6 +1548,11 @@
   display: flex;
   align-items: center;
   gap: 14px;
+  flex: 1;
+}
+
+.group-workbench-main.is-clickable {
+  cursor: pointer;
 }
 
 .group-workbench-mark {

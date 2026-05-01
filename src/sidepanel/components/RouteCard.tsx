@@ -262,22 +262,6 @@ export function RouteCard({
           ))}
         </select>
 
-        <button
-          className="route-action-btn dev-btn"
-          onClick={() => void navigator.clipboard.writeText(toCurl(url, httpMethod, headers))}
-          title="复制 cURL"
-          type="button"
-        >
-          {"{}"}
-        </button>
-        <button
-          className="route-action-btn dev-btn"
-          onClick={() => void navigator.clipboard.writeText(toFetch(url, httpMethod, headers))}
-          title="复制 fetch"
-          type="button"
-        >
-          fn
-        </button>
 
         {repoUrl ? (
           <a

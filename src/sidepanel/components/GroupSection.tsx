@@ -131,7 +131,7 @@ export function GroupSection({
   return (
     <section className={`surface group-workbench${isCollapsed ? " is-collapsed" : " is-expanded"}`}>
       <div className="group-workbench-row">
-        <div className="group-workbench-main">
+        <div className={`group-workbench-main${!isEditing ? " is-clickable" : ""}`} onClick={!isEditing ? () => void handleToggleCollapsed() : undefined}>
           <div className="group-workbench-mark" aria-hidden="true">
             <span className="group-workbench-mark-core" />
           </div>
@@ -242,6 +242,7 @@ export function GroupSection({
                 重命名
               </button>
             ) : null}
+            {/* 分享功能暂时隐藏
             <button
               className="route-text-button button-pill button-accent"
               disabled={items.length === 0}
@@ -250,6 +251,7 @@ export function GroupSection({
             >
               分享
             </button>
+            */}
             {!isDefault ? (
               <button
                 className="route-text-button is-danger button-pill"
@@ -266,27 +268,7 @@ export function GroupSection({
 
       {!isCollapsed ? (
         <div className="group-workbench-content">
-          {showManualForm ? (
-            <div className="manual-route-panel group-workbench-panel">
-              <input
-                className="group-input manual-route-input"
-                onChange={(event) => setManualUrl(event.target.value)}
-                placeholder="手动输入网址，例如 https://example.com"
-                value={manualUrl}
-              />
-              <button
-                className="route-text-button is-primary button-pill"
-                disabled={!manualUrl.trim()}
-                onClick={() => void handleAddRoute()}
-                type="button"
-              >
-                添加
-              </button>
-              <button className="route-text-button button-pill" onClick={handleCancelManualForm} type="button">
-                取消
-              </button>
-            </div>
-          ) : null}
+
 
           {items.length === 0 ? <p className="group-workbench-empty">这个分组里还没有路由。</p> : null}
 
@@ -328,6 +310,42 @@ export function GroupSection({
           routes={items.map((item) => ({ url: item.url, title: item.title, icon: item.icon }))}
           onClose={() => setShowShare(false)}
         />
+      ) : null}
+
+      {showManualForm ? (
+        <div className="modal-overlay" onClick={handleCancelManualForm}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0, marginBottom: "20px", color: "#172748", fontSize: "18px" }}>手动添加网址</h3>
+            <div style={{ display: "grid", gap: "20px" }}>
+              <input
+                autoFocus
+                className="group-input"
+                onChange={(event) => setManualUrl(event.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && manualUrl.trim()) {
+                    void handleAddRoute()
+                  }
+                }}
+                placeholder="输入网址，例如 https://example.com"
+                style={{ width: "100%", boxSizing: "border-box" }}
+                value={manualUrl}
+              />
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+                <button className="route-text-button button-pill" onClick={handleCancelManualForm} type="button">
+                  取消
+                </button>
+                <button
+                  className="route-text-button is-primary button-pill"
+                  disabled={!manualUrl.trim()}
+                  onClick={() => void handleAddRoute()}
+                  type="button"
+                >
+                  添加
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       ) : null}
     </section>
   )

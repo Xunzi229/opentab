@@ -1,10 +1,11 @@
 {
   "name": "opentab",
-  "version": "0.1.89",
+  "version": "0.1.98",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test": "node --test --experimental-strip-types tests/**/*.test.ts",
     "build": "node ./scripts/bump-extension-version.mjs && tsc --noEmit && vite build --config ./vite.config.mjs --configLoader runner",
     "preview": "vite preview"
   },

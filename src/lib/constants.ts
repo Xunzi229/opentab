@@ -27,6 +27,7 @@ export const DEFAULT_SETTINGS = {
   syncProvider: "local",
   enableVisitTracking: true,
   viewMode: "grid",
+  collapsedGroupIds: [],
   webdavUrl: "",
   webdavUsername: "",
   webdavPassword: "",

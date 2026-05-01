@@ -6,6 +6,7 @@ type GroupSectionProps = {
   id: string
   title: string
   description: string
+  isCollapsed?: boolean
   isDefault?: boolean
   isLocked?: boolean
   pinned?: boolean
@@ -34,12 +35,24 @@ type GroupSectionProps = {
   onCancelEdit: () => void
   onSaveEdit: (groupId: string) => void
   onDeleteGroup: (groupId: string) => void
+  onToggleCollapsed: (groupId: string) => Promise<void>
   onToggleLock: (groupId: string) => Promise<void>
   onTogglePin: (groupId: string) => Promise<void>
   onToggleStar: (routeId: string) => void
   onDeleteRoute: (routeId: string) => void
   onMoveRouteGroup: (routeId: string, groupId: string) => void
-  onEditRoute: (routeId: string, input: { title: string; url: string; note?: string; tags?: string; httpMethod?: string; repoUrl?: string; environments?: import("../../types/route").Environment[] }) => Promise<void>
+  onEditRoute: (
+    routeId: string,
+    input: {
+      title: string
+      url: string
+      note?: string
+      tags?: string
+      httpMethod?: string
+      repoUrl?: string
+      environments?: import("../../types/route").Environment[]
+    }
+  ) => Promise<void>
   onOpenAllRoutes: (urls: string[]) => Promise<void>
   onAddRoute: (groupId: string, url: string) => Promise<void>
   onRestoreRoute: (url: string) => void
@@ -54,6 +67,7 @@ export function GroupSection({
   id,
   title,
   description,
+  isCollapsed = false,
   isDefault = false,
   isLocked = false,
   pinned = false,
@@ -66,6 +80,7 @@ export function GroupSection({
   onCancelEdit,
   onSaveEdit,
   onDeleteGroup,
+  onToggleCollapsed,
   onToggleLock,
   onTogglePin,
   onToggleStar,
@@ -97,6 +112,14 @@ export function GroupSection({
     setShowManualForm(false)
   }
 
+  async function handleToggleCollapsed() {
+    if (!isCollapsed) {
+      handleCancelManualForm()
+    }
+
+    await onToggleCollapsed(id)
+  }
+
   return (
     <section className="surface group-section">
       <div className="section-head">
@@ -118,13 +141,22 @@ export function GroupSection({
           ) : (
             <h3>
               {title}
-              {isLocked && <span className="lock-icon" title="已锁定">🔒</span>}
-              {pinned && <span className="pin-icon" title="已置顶">📌</span>}
+              {isLocked ? <span className="lock-icon" title="已锁定">🔒</span> : null}
+              {pinned ? <span className="pin-icon" title="已置顶">📌</span> : null}
             </h3>
           )}
           <p>{description}</p>
         </div>
         <div className="group-actions">
+          <button
+            aria-label={isCollapsed ? `expand group ${title}` : `collapse group ${title}`}
+            className="group-collapse-btn"
+            onClick={() => void handleToggleCollapsed()}
+            title={isCollapsed ? "展开分组" : "收起分组"}
+            type="button"
+          >
+            {isCollapsed ? "v" : "^"}
+          </button>
           <button
             className={`lock-btn${isLocked ? " locked" : ""}`}
             onClick={() => void onToggleLock(id)}
@@ -168,7 +200,7 @@ export function GroupSection({
           >
             恢复并删除
           </button>
-          {!isEditing && (
+          {!isEditing ? (
             <button
               className="route-text-button"
               disabled={isLocked}
@@ -177,7 +209,7 @@ export function GroupSection({
             >
               重命名
             </button>
-          )}
+          ) : null}
           <button
             className="route-text-button"
             disabled={items.length === 0}
@@ -186,7 +218,7 @@ export function GroupSection({
           >
             分享
           </button>
-          {!isDefault && (
+          {!isDefault ? (
             <button
               className="route-text-button is-danger"
               disabled={isLocked}
@@ -195,10 +227,10 @@ export function GroupSection({
             >
               删除分组
             </button>
-          )}
+          ) : null}
         </div>
       </div>
-      {showManualForm ? (
+      {!isCollapsed && showManualForm ? (
         <div className="manual-route-panel">
           <input
             className="group-input manual-route-input"
@@ -219,40 +251,42 @@ export function GroupSection({
           </button>
         </div>
       ) : null}
-      <div className={viewMode === "grid" ? "route-list route-grid" : "route-list route-list-view"}>
-        {items.map((item) => (
-          <RouteCard
-            activeEnv={item.activeEnv}
-            environments={item.environments}
-            groupId={item.groupId}
-            groups={groups}
-            id={item.id}
-            icon={item.icon}
-            key={item.id}
-            note={item.note}
-            tags={item.tags}
-            onDelete={onDeleteRoute}
-            onDropRoute={onDropRoute}
-            onEdit={onEditRoute}
-            onEnvChange={onEnvChange}
-            onMoveGroup={onMoveRouteGroup}
-            onRestore={onRestoreRoute}
-            onToggleStar={onToggleStar}
-            path={item.path}
-            starred={item.starred}
-            title={item.title}
-            url={item.url}
-            visitCount={item.visitCount}
-          />
-        ))}
-      </div>
-      {showShare && (
+      {!isCollapsed ? (
+        <div className={viewMode === "grid" ? "route-list route-grid" : "route-list route-list-view"}>
+          {items.map((item) => (
+            <RouteCard
+              activeEnv={item.activeEnv}
+              environments={item.environments}
+              groupId={item.groupId}
+              groups={groups}
+              id={item.id}
+              icon={item.icon}
+              key={item.id}
+              note={item.note}
+              tags={item.tags}
+              onDelete={onDeleteRoute}
+              onDropRoute={onDropRoute}
+              onEdit={onEditRoute}
+              onEnvChange={onEnvChange}
+              onMoveGroup={onMoveRouteGroup}
+              onRestore={onRestoreRoute}
+              onToggleStar={onToggleStar}
+              path={item.path}
+              starred={item.starred}
+              title={item.title}
+              url={item.url}
+              visitCount={item.visitCount}
+            />
+          ))}
+        </div>
+      ) : null}
+      {showShare ? (
         <ShareDialog
           groupName={title}
           routes={items.map((item) => ({ url: item.url, title: item.title, icon: item.icon }))}
           onClose={() => setShowShare(false)}
         />
-      )}
+      ) : null}
     </section>
   )
 }

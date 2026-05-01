@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { DEFAULT_GROUP_ID, STORAGE_KEYS } from "../../lib/constants"
+import { isGroupCollapsed, toggleCollapsedGroupId } from "../../lib/group-collapse"
 import { createGroup, deleteGroup, getGroupedRoutes, reorderGroups, renameGroup, toggleGroupLock, toggleGroupPin } from "../../services/group-service"
 import { listVisits } from "../../services/history-service"
 import { moveRouteToGroup, removeRoute, reorderRoutes, saveRoute, toggleRouteStar, updateRoute } from "../../services/route-service"
@@ -14,11 +15,13 @@ import { ViewToggle } from "../components/ViewToggle"
 type GroupedRoutes = Awaited<ReturnType<typeof getGroupedRoutes>>
 
 type DashboardPageProps = {
+  collapsedGroupIds: readonly string[]
+  onCollapsedGroupIdsChange: (collapsedGroupIds: string[]) => Promise<void>
   viewMode: "grid" | "list"
   onViewModeChange: (mode: "grid" | "list") => void
 }
 
-export function DashboardPage({ viewMode, onViewModeChange }: DashboardPageProps) {
+export function DashboardPage({ collapsedGroupIds, onCollapsedGroupIdsChange, viewMode, onViewModeChange }: DashboardPageProps) {
   const [searchText, setSearchText] = useState("")
   const [newGroupName, setNewGroupName] = useState("")
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null)
@@ -301,6 +304,10 @@ export function DashboardPage({ viewMode, onViewModeChange }: DashboardPageProps
     }
   }
 
+  async function handleToggleGroupCollapse(groupId: string) {
+    await onCollapsedGroupIdsChange(toggleCollapsedGroupId(collapsedGroupIds, groupId))
+  }
+
   return (
     <section className="page-stack">
       <HeroBanner />
@@ -370,6 +377,7 @@ export function DashboardPage({ viewMode, onViewModeChange }: DashboardPageProps
               editingName={editingGroupName}
               groups={groupOptions}
               id={group.id}
+              isCollapsed={isGroupCollapsed(collapsedGroupIds, group.id)}
               isDefault={group.id === DEFAULT_GROUP_ID}
               isEditing={editingGroupId === group.id}
               isLocked={group.isLocked}
@@ -389,6 +397,7 @@ export function DashboardPage({ viewMode, onViewModeChange }: DashboardPageProps
               onRestoreRoute={handleRestoreRoute}
               onSaveEdit={handleSaveEdit}
               onStartEdit={handleStartEdit}
+              onToggleCollapsed={handleToggleGroupCollapse}
               onToggleLock={handleToggleLock}
               onTogglePin={handleTogglePin}
               onToggleStar={handleToggleStar}

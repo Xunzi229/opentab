@@ -13,11 +13,13 @@
 - [dist/manager.html](../dist/manager.html)
 - [dist/sidepanel.html](../dist/sidepanel.html)
 - [dist/options.html](../dist/options.html)
+- [dist/share.html](../dist/share.html)
 
 说明：
 
-- `manager.html` 是真正的独立管理页。
-- `sidepanel.html` 只用于 Chrome Side Panel。
+- `manager.html` 是独立管理页（复用 sidepanel 代码）。
+- `sidepanel.html` 用于 Chrome Side Panel。
+- `share.html` 用于分享分组的导入页面。
 - 通过 Popup 打开管理页时，会在原来的浏览器窗口中新建固定标签页。
 
 ## 2. 如何加载到 Chrome
@@ -48,20 +50,22 @@
 
 ### 3.3 关于 Side Panel
 
-- `sidepanel.html` 仍然存在。
-- 它只作为 Side Panel 入口使用。
-- 点击扩展图标时，不再默认把 Side Panel 挂到当前网页右侧。
+- `sidepanel.html` 作为 Side Panel 入口使用。
+- `manager.html` 复用 sidepanel 代码，作为独立管理页。
+- 点击扩展图标时，不默认打开 Side Panel（`openPanelOnActionClick: false`）。
 
 ## 4. 管理页导航
 
 管理页左侧现在支持这些入口：
 
+- 仪表盘（Dashboard）
 - 全部收藏
 - 最近访问
-- 我的分组
 - 标签管理
+- 备份管理（本地备份 + WebDAV 同步）
 - 导出
 - 导入
+- 设置
 
 ## 5. 导入 / 导出备份
 
@@ -69,15 +73,16 @@
 
 现在的规则是：
 
-- 导出文件扩展名是 `.opentab`
-- 导出文件名格式是 `backup_时间戳.opentab`
-- 文件内部会先压缩再编码，不直接暴露原始 JSON 结构
+- 导出文件扩展名是 `.opentab.zip`
+- 导出文件名格式是 `backup_时间戳.opentab.zip`
+- 文件内部使用 JSZip 压缩，包含 `manifest.json`、`archive.json`、`snapshot.json`、`webdav-configs.json`
+- 兼容旧版 gzip 格式的 `.opentab` 文件
 
 使用方式：
 
-1. 打开管理页左侧的“导出”或“导入”
-2. 导出时点击“导出 .opentab 备份”
-3. 导入时选择之前导出的 `.opentab` 文件
+1. 打开管理页左侧的”导出”或”导入”
+2. 导出时点击”导出 .opentab.zip 备份”
+3. 导入时选择之前导出的 `.opentab.zip` 文件
 
 设置页中的导入 / 导出也使用同一套格式。
 
@@ -93,7 +98,7 @@
 6. 最近访问最多 10 条
 7. 分组内路由必须采用单条列表展示
 8. 必须支持批量打开分组中的地址
-9. 备份文件必须使用 `.opentab` 格式，而不是裸 JSON
+9. 备份文件必须使用 `.opentab.zip` 格式，而不是裸 JSON
 
 对应文档见：
 

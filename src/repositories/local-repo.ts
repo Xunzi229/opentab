@@ -148,6 +148,7 @@ export type WebdavConfigVersion = {
   webdavUrl: string
   webdavUsername: string
   webdavFilePath: string
+  webdavPassword?: string
 }
 
 export type AppBackupArchive = {
@@ -156,19 +157,41 @@ export type AppBackupArchive = {
 }
 
 export async function getWebdavConfigVersions() {
-  return getStorageValue<WebdavConfigVersion[]>(STORAGE_KEYS.webdavConfigs, [])
+  const versions = await getStorageValue<WebdavConfigVersion[]>(STORAGE_KEYS.webdavConfigs, [])
+  return versions
+    .filter((version, index, items) => items.findIndex((item) => item.id === version.id) === index)
+    .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
 }
 
-export async function saveWebdavConfigVersion(version: WebdavConfigVersion) {
+export async function saveWebdavConfigVersion(version: WebdavConfigVersion, limit = Number.POSITIVE_INFINITY) {
   const current = await getWebdavConfigVersions()
-  const next = [version, ...current]
-  await setStorageValue(STORAGE_KEYS.webdavConfigs, next)
+  const next = [version, ...current.filter((item) => item.id !== version.id)]
+  const normalizedLimit = Number.isFinite(limit) ? Math.max(1, Math.floor(limit)) : next.length
+  const kept = next.slice(0, normalizedLimit)
+  const removed = next.slice(normalizedLimit)
+  await setStorageValue(STORAGE_KEYS.webdavConfigs, kept)
+  return {
+    versions: kept,
+    removed
+  }
 }
 
 export async function removeWebdavConfigVersion(id: string) {
   const current = await getWebdavConfigVersions()
   const next = current.filter((v) => v.id !== id)
   await setStorageValue(STORAGE_KEYS.webdavConfigs, next)
+}
+
+export async function trimWebdavConfigVersions(limit: number) {
+  const current = await getWebdavConfigVersions()
+  const normalizedLimit = Math.max(1, Math.floor(limit))
+  const kept = current.slice(0, normalizedLimit)
+  const removed = current.slice(normalizedLimit)
+  await setStorageValue(STORAGE_KEYS.webdavConfigs, kept)
+  return {
+    versions: kept,
+    removed
+  }
 }
 
 export async function getAppBackupArchive(): Promise<AppBackupArchive> {

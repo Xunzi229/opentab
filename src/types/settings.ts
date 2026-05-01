@@ -7,4 +7,5 @@ export type AppSettings = {
   webdavUsername: string
   webdavPassword: string
   webdavFilePath: string
+  webdavBackupLimit: number
 }

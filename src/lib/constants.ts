@@ -30,5 +30,6 @@ export const DEFAULT_SETTINGS = {
   webdavUrl: "",
   webdavUsername: "",
   webdavPassword: "",
-  webdavFilePath: "opentab/backup.opentab.zip"
+  webdavFilePath: "opentab/backup.opentab.zip",
+  webdavBackupLimit: 10
 } as const

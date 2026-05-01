@@ -1,8 +1,16 @@
 import { useRef, useState, type ChangeEvent } from "react"
 import { createBackupFilename, decodeBackup, encodeBackup } from "../../lib/backup"
-import { encryptText, decryptText } from "../../lib/crypto"
-import { getAppBackupArchive, saveAppBackupArchive, getWebdavConfigVersions, saveWebdavConfigVersion, removeWebdavConfigVersion, WebdavConfigVersion } from "../../repositories/local-repo"
-import { downloadSnapshotFromWebdav, uploadSnapshotToWebdav, verifyWebdavConnection, uploadFileToWebdav, deleteFileFromWebdav, downloadFileFromWebdav, listWebdavFiles, resolveWebdavConfigDirectory } from "../../services/webdav-sync-service"
+import { decryptText, encryptText } from "../../lib/crypto"
+import { getAppBackupArchive, saveAppBackupArchive } from "../../repositories/local-repo"
+import {
+  deleteWebdavBackup,
+  downloadSnapshotFromWebdav,
+  enforceWebdavBackupLimit,
+  listWebdavBackups,
+  uploadSnapshotToWebdav,
+  verifyWebdavConnection,
+  type WebdavBackupItem
+} from "../../services/webdav-sync-service"
 import { loadSettings, updateSettings } from "../../services/settings-service"
 
 function downloadBackupFile(filename: string, content: ArrayBuffer) {
@@ -15,6 +23,22 @@ function downloadBackupFile(filename: string, content: ArrayBuffer) {
   URL.revokeObjectURL(url)
 }
 
+function normalizeBackupLimit(value: string | number) {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) {
+    return 10
+  }
+  return Math.min(100, Math.max(1, Math.floor(parsed)))
+}
+
+function formatBackupLabel(item: WebdavBackupItem) {
+  if (!item.createdAt) {
+    return item.name
+  }
+
+  return new Date(item.createdAt).toLocaleString()
+}
+
 export function BackupPage() {
   const [statusMessage, setStatusMessage] = useState("这里统一管理本地备份和 WebDAV 同步。")
   const [syncing, setSyncing] = useState(false)
@@ -23,15 +47,30 @@ export function BackupPage() {
   const [webdavUsername, setWebdavUsername] = useState("")
   const [webdavPassword, setWebdavPassword] = useState("")
   const [webdavFilePath, setWebdavFilePath] = useState("")
+  const [webdavBackupLimit, setWebdavBackupLimit] = useState("10")
   const [modalStatus, setModalStatus] = useState<string | null>(null)
-  const [versions, setVersions] = useState<WebdavConfigVersion[]>([])
+  const [remoteBackups, setRemoteBackups] = useState<WebdavBackupItem[]>([])
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
-  function buildVersionConfig(version: Pick<WebdavConfigVersion, "webdavUrl" | "webdavUsername" | "webdavFilePath">) {
+  async function refreshRemoteBackups() {
+    const backups = await listWebdavBackups()
+    setRemoteBackups(backups)
+    return backups
+  }
+
+  async function saveCurrentSettings(passwordValue = webdavPassword) {
+    const encryptedPassword = await encryptText(passwordValue)
+    const limit = normalizeBackupLimit(webdavBackupLimit)
+
+    await updateSettings("webdavUrl", webdavUrl.trim())
+    await updateSettings("webdavUsername", webdavUsername.trim())
+    await updateSettings("webdavPassword", encryptedPassword)
+    await updateSettings("webdavFilePath", webdavFilePath.trim())
+    await updateSettings("webdavBackupLimit", limit)
+
     return {
-      webdavUrl: version.webdavUrl,
-      webdavUsername: version.webdavUsername,
-      webdavPassword: webdavPassword
+      encryptedPassword,
+      limit
     }
   }
 
@@ -67,8 +106,12 @@ export function BackupPage() {
   async function handleUploadToWebdav() {
     setSyncing(true)
     try {
-      await uploadSnapshotToWebdav()
-      setStatusMessage("上传完成，当前本地数据已同步到 WebDAV。")
+      const result = await uploadSnapshotToWebdav()
+      if (showWebdavModal) {
+        await refreshRemoteBackups()
+      }
+      const replacedMessage = result.replaced ? "，已覆盖最旧的一条远程备份并更新时间" : ""
+      setStatusMessage(`上传完成，当前本地数据已同步到 WebDAV${replacedMessage}。`)
     } catch (error) {
       console.error(error)
       setStatusMessage(error instanceof Error ? error.message : "上传失败，请检查 WebDAV 配置。")
@@ -80,8 +123,8 @@ export function BackupPage() {
   async function handleDownloadFromWebdav() {
     setSyncing(true)
     try {
-      await downloadSnapshotFromWebdav()
-      setStatusMessage("下载完成，WebDAV 备份已覆盖到本地。")
+      const result = await downloadSnapshotFromWebdav()
+      setStatusMessage(`下载完成，已从 ${result.sourcePath} 恢复最新远程备份。`)
     } catch (error) {
       console.error(error)
       setStatusMessage(error instanceof Error ? error.message : "下载失败，请检查 WebDAV 配置。")
@@ -90,306 +133,285 @@ export function BackupPage() {
     }
   }
 
+  async function openWebdavModal() {
+    const settings = await loadSettings()
+    const decryptedPassword = await decryptText(settings.webdavPassword ?? "")
+    const limit = normalizeBackupLimit(settings.webdavBackupLimit ?? 10)
+
+    setWebdavUrl(settings.webdavUrl ?? "")
+    setWebdavUsername(settings.webdavUsername ?? "")
+    setWebdavPassword(decryptedPassword)
+    setWebdavFilePath(settings.webdavFilePath ?? "opentab/backup.opentab.zip")
+    setWebdavBackupLimit(String(limit))
+    setModalStatus(null)
+    setShowWebdavModal(true)
+
+    try {
+      const backups = await refreshRemoteBackups()
+      setModalStatus(backups.length > 0 ? `已加载 ${backups.length} 条远程备份。` : "远程目录中还没有历史备份。")
+    } catch (error) {
+      console.error(error)
+      setModalStatus(error instanceof Error ? error.message : "远程备份列表加载失败。")
+      setRemoteBackups([])
+    }
+  }
+
+  async function handleSaveSettings() {
+    try {
+      await saveCurrentSettings()
+      setModalStatus("WebDAV 配置已保存。")
+      setStatusMessage("WebDAV 配置已保存。")
+    } catch (error) {
+      console.error(error)
+      setModalStatus(error instanceof Error ? error.message : "保存失败。")
+    }
+  }
+
+  async function handleVerifyConnection() {
+    try {
+      setModalStatus("正在检查 WebDAV 连接...")
+      await saveCurrentSettings()
+      await verifyWebdavConnection()
+      setModalStatus("WebDAV 连接检查通过。")
+      setStatusMessage("WebDAV 连接检查通过。")
+    } catch (error) {
+      console.error(error)
+      const message = error instanceof Error ? error.message : "连接检查失败。"
+      setModalStatus(message)
+      setStatusMessage(message)
+    }
+  }
+
+  async function handleApplyBackupLimit() {
+    try {
+      const { limit } = await saveCurrentSettings()
+      const { removed } = await enforceWebdavBackupLimit()
+      const backups = await refreshRemoteBackups()
+      setModalStatus(
+        removed.length > 0
+          ? `备份数量已限制为 ${limit}，并清理了 ${removed.length} 条旧备份，当前剩余 ${backups.length} 条。`
+          : `备份数量已更新为 ${limit}。`
+      )
+      setStatusMessage("WebDAV 备份数量设置已生效。")
+    } catch (error) {
+      console.error(error)
+      setModalStatus(error instanceof Error ? error.message : "更新备份数量失败。")
+    }
+  }
+
+  async function handleRestoreRemoteBackup(item: WebdavBackupItem) {
+    try {
+      await downloadSnapshotFromWebdav(item.remotePath)
+      setModalStatus(`已恢复远程备份 ${item.name}。`)
+      setStatusMessage(`已从 WebDAV 恢复备份 ${item.name}。`)
+    } catch (error) {
+      console.error(error)
+      setModalStatus(error instanceof Error ? error.message : "恢复失败。")
+    }
+  }
+
+  async function handleDeleteRemoteBackup(item: WebdavBackupItem) {
+    if (!window.confirm(`确认删除远程备份 ${item.name}？此操作不可逆。`)) {
+      return
+    }
+
+    try {
+      await deleteWebdavBackup(item.remotePath)
+      await refreshRemoteBackups()
+      setModalStatus(`已删除远程备份 ${item.name}。`)
+      setStatusMessage(`已删除 WebDAV 远程备份 ${item.name}。`)
+    } catch (error) {
+      console.error(error)
+      setModalStatus(error instanceof Error ? error.message : "删除失败。")
+    }
+  }
+
   return (
-    <section className="page-stack">
-      <section className="surface group-section">
-        <div className="section-head">
-          <div>
-            <h3>备份与同步</h3>
-            <p>{statusMessage}</p>
+    <section className="page-stack backup-page">
+      <section className="backup-hero">
+        <div className="backup-hero-mark">
+          <span className="backup-hero-mark-core" />
+        </div>
+        <div className="backup-hero-copy">
+          <h2>备份与同步</h2>
+          <p>管理本地备份和 WebDAV 同步，保障数据安全。</p>
+          <div className="backup-hero-status">{statusMessage}</div>
+        </div>
+      </section>
+
+      <section className="surface backup-feature-card backup-feature-card-local">
+        <div className="backup-feature-content">
+          <div className="backup-feature-icon backup-feature-icon-local">
+            <span className="backup-feature-icon-core" />
+          </div>
+          <div className="backup-feature-body">
+            <div className="backup-feature-title-row">
+              <h3>备份与同步</h3>
+              <span className="backup-feature-badge backup-feature-badge-local">本地备份</span>
+            </div>
+            <p>这里统一管理本地备份和 WebDAV 同步。</p>
+            <div className="group-create-row backup-toolbar">
+              <button className="route-text-button is-primary" onClick={handleExport} type="button">
+                导出 zip 备份
+              </button>
+              <button className="route-text-button" onClick={handleImportClick} type="button">
+                导入 zip 备份
+              </button>
+            </div>
           </div>
         </div>
-        <div className="group-create-row">
-          <button className="route-text-button is-primary" onClick={handleExport} type="button">
-            导出 zip 备份
-          </button>
-          <button className="route-text-button" onClick={handleImportClick} type="button">
-            导入 zip 备份
-          </button>
+        <div className="backup-feature-art backup-feature-art-local" aria-hidden="true">
+          <span className="backup-orb backup-orb-a" />
+          <span className="backup-orb backup-orb-b" />
+          <span className="backup-orb backup-orb-c" />
+          <div className="backup-stack">
+            <span className="backup-stack-unit backup-stack-top" />
+            <span className="backup-stack-unit backup-stack-mid" />
+            <span className="backup-stack-folder" />
+          </div>
         </div>
         <input hidden accept=".opentab,.zip,application/zip,application/octet-stream,text/plain" onChange={handleImportFile} ref={fileInputRef} type="file" />
       </section>
 
-      <section className="surface group-section">
-        <div className="section-head">
-          <div>
-            <h3>WebDAV 同步</h3>
-            <p>先在设置页面填写 WebDAV 地址、用户名、密码和备份路径。</p>
+      <section className="surface backup-feature-card backup-feature-card-remote">
+        <div className="backup-feature-content">
+          <div className="backup-feature-icon backup-feature-icon-remote">
+            <span className="backup-feature-icon-core" />
+          </div>
+          <div className="backup-feature-body">
+            <div className="backup-feature-title-row">
+              <h3>WebDAV 同步</h3>
+              <span className="backup-feature-badge backup-feature-badge-remote">远程备份</span>
+            </div>
+            <p>上传会生成一份新的远程备份；下载默认恢复最新一份远程备份。</p>
+            <div className="group-create-row backup-toolbar">
+              <button className="route-text-button is-primary" disabled={syncing} onClick={handleUploadToWebdav} type="button">
+                上传到 WebDAV
+              </button>
+              <button className="route-text-button" disabled={syncing} onClick={() => void openWebdavModal()} type="button">
+                配置 WebDAV
+              </button>
+              <button className="route-text-button" disabled={syncing} onClick={handleDownloadFromWebdav} type="button">
+                从 WebDAV 下载
+              </button>
+            </div>
           </div>
         </div>
-        <div className="group-create-row">
-          <button className="route-text-button is-primary" disabled={syncing} onClick={handleUploadToWebdav} type="button">
-            上传到 WebDAV
-          </button>
-          <button
-            className="route-text-button"
-            disabled={syncing}
-            onClick={async () => {
-              const settings = await loadSettings()
-              const decryptedPassword = await decryptText(settings?.webdavPassword ?? "")
-              setWebdavUrl(settings?.webdavUrl ?? "")
-              setWebdavUsername(settings?.webdavUsername ?? "")
-              setWebdavPassword(decryptedPassword)
-              setWebdavFilePath(settings?.webdavFilePath ?? "opentab/backup.opentab.zip")
-              const vs = await getWebdavConfigVersions()
-              setVersions(vs)
-              setModalStatus(null)
-              setShowWebdavModal(true)
+        <div className="backup-feature-art backup-feature-art-remote" aria-hidden="true">
+          <span className="backup-orb backup-orb-d" />
+          <span className="backup-orb backup-orb-e" />
+          <span className="backup-orb backup-orb-f" />
+          <div className="backup-cloud">
+            <span className="backup-cloud-core" />
+            <span className="backup-cloud-node backup-cloud-node-a" />
+            <span className="backup-cloud-node backup-cloud-node-b" />
+            <span className="backup-cloud-arrow" />
+          </div>
+        </div>
+      </section>
 
-              // 尝试从远程拉取配置版本列表
-              try {
-                const baseDir = resolveWebdavConfigDirectory(settings?.webdavFilePath || "")
-                const remoteFiles = await listWebdavFiles(baseDir, {
-                  webdavUrl: settings?.webdavUrl || "",
-                  webdavUsername: settings?.webdavUsername || "",
-                  webdavPassword: decryptedPassword
-                })
-                // 过滤出完整配置文件
-                const fullConfigFiles = remoteFiles.filter(f => f.startsWith("config-") && f.endsWith("-full.json"))
-
-                // 拉取远程完整配置并与本地合并
-                for (const file of fullConfigFiles) {
-                  try {
-                    const filePath = baseDir ? `${baseDir}/${file}` : file
-                    const content = await downloadFileFromWebdav(filePath, {
-                      webdavUrl: settings?.webdavUrl || "",
-                      webdavUsername: settings?.webdavUsername || "",
-                      webdavPassword: decryptedPassword
-                    })
-                    const remoteConfig: WebdavConfigVersion = JSON.parse(content)
-                    const exists = vs.some(v => v.id === remoteConfig.id)
-                    if (!exists) {
-                      await saveWebdavConfigVersion(remoteConfig)
-                    } else {
-                      await removeWebdavConfigVersion(remoteConfig.id)
-                      await saveWebdavConfigVersion(remoteConfig)
-                    }
-                  } catch (e) {
-                    console.warn(`Failed to load remote config ${file}:`, e)
-                  }
-                }
-
-                // 重新加载版本列表
-                const updatedVs = await getWebdavConfigVersions()
-                setVersions(updatedVs)
-              } catch (e) {
-                console.warn("Failed to sync remote configs:", e)
-              }
-            }}
-            type="button"
-          >
-            配置 WebDAV
-          </button>
-          <button className="route-text-button" disabled={syncing} onClick={handleDownloadFromWebdav} type="button">
-            从 WebDAV 下载
-          </button>
+      <section className="surface backup-tip-bar">
+        <div className="backup-tip-icon" aria-hidden="true">
+          !
+        </div>
+        <div className="backup-tip-copy">
+          <strong>提示</strong>
+          <span>建议定期进行本地备份，并将重要数据同步到 WebDAV 以防止数据丢失。</span>
         </div>
       </section>
 
       {showWebdavModal ? (
-        <div className="modal-overlay">
-          <div className="modal-card webdav-modal">
-            <h3 style={{ marginTop: 0 }}>WebDAV 配置</h3>
-            <p style={{ marginTop: 0 }}>填写你的 WebDAV 地址、账号和备份路径，供手动上传和下载使用。</p>
-            <input className="group-input" placeholder="https://dav.example.com/remote.php/dav/files/user" value={webdavUrl} onChange={(e) => setWebdavUrl(e.target.value)} />
-            <input className="group-input" placeholder="WebDAV 用户名" value={webdavUsername} onChange={(e) => setWebdavUsername(e.target.value)} />
-            <input className="group-input" placeholder="WebDAV 密码" type="password" value={webdavPassword} onChange={(e) => setWebdavPassword(e.target.value)} />
-            <input className="group-input" placeholder="opentab/backup.opentab.zip" value={webdavFilePath} onChange={(e) => setWebdavFilePath(e.target.value)} />
+        <div className="modal-overlay" onClick={() => setShowWebdavModal(false)}>
+          <div className="modal-card webdav-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="webdav-modal-header">
+              <h3>WebDAV 配置</h3>
+              <p>填写你的 WebDAV 地址、账号、密码、备份路径和备份数量上限。备份路径可填目录，系统会自动补成 `backup.opentab.zip`。</p>
+            </div>
 
-            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-              <button
-                className="route-text-button is-primary"
-                onClick={async () => {
-                  try {
-                    // persist current settings
-                    await updateSettings("webdavUrl", webdavUrl)
-                    await updateSettings("webdavUsername", webdavUsername)
-                    await updateSettings("webdavPassword", await encryptText(webdavPassword))
-                    await updateSettings("webdavFilePath", webdavFilePath)
-
-                    // create version entry
-                    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-                    const v: WebdavConfigVersion = {
-                      id,
-                      createdAt: new Date().toISOString(),
-                      webdavUrl,
-                      webdavUsername,
-                      webdavFilePath
-                    }
-
-                    const dir = resolveWebdavConfigDirectory(webdavFilePath)
-
-                    // 先上传到远程（完整配置，不含密码）
-                    try {
-                      const fullPath = `${dir}/config-${id}-full.json`
-                      const fullPayload = JSON.stringify(v)
-                      await uploadFileToWebdav(fullPath, fullPayload, "application/json", buildVersionConfig(v))
-                    } catch (e) {
-                      console.error("Upload full version to WebDAV failed:", e)
-                      throw new Error("远程上传完整配置失败，请检查连接。")
-                    }
-
-                    // 再上传公开配置（不含密码）
-                    try {
-                      const publicPath = `${dir}/config-${id}.json`
-                      const publicPayload = JSON.stringify({
-                        id: v.id,
-                        createdAt: v.createdAt,
-                        webdavUrl: v.webdavUrl,
-                        webdavUsername: v.webdavUsername,
-                        webdavFilePath: v.webdavFilePath
-                      })
-                      await uploadFileToWebdav(publicPath, publicPayload, "application/json", buildVersionConfig(v))
-                    } catch (e) {
-                      console.error("Upload public version to WebDAV failed:", e)
-                      throw new Error("远程上传公开配置失败，请检查连接。")
-                    }
-
-                    // 远程上传成功后，保存到本地
-                    await saveWebdavConfigVersion(v)
-                    const vs = await getWebdavConfigVersions()
-                    setVersions(vs)
-
-                    setModalStatus("配置已保存并生成新版本，同时已上传到 WebDAV（完整和公开版本）。")
-                    setStatusMessage("WebDAV 配置已保存并上传到远程。")
-                  } catch (err) {
-                    console.error(err)
-                    setModalStatus(err instanceof Error ? err.message : "保存失败。")
-                  }
-                }}
-                type="button"
-              >
-                保存并生成版本
-              </button>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <button
-                  className="route-text-button"
-                  onClick={async () => {
-                    try {
-                      setModalStatus("正在检查 WebDAV 连接...")
-                      // ensure latest fields saved for check
-                      await updateSettings("webdavUrl", webdavUrl)
-                      await updateSettings("webdavUsername", webdavUsername)
-                      await updateSettings("webdavPassword", await encryptText(webdavPassword))
-                      await updateSettings("webdavFilePath", webdavFilePath)
-                      await verifyWebdavConnection()
-                      setModalStatus("WebDAV 连接检查通过。")
-                      setStatusMessage("WebDAV 连接检查通过。")
-                    } catch (err) {
-                      console.error(err)
-                      setModalStatus(err instanceof Error ? err.message : "连接检查失败。")
-                      setStatusMessage(err instanceof Error ? err.message : "连接检查失败。")
-                    }
-                  }}
-                  type="button"
-                >
-                  检查连接
-                </button>
-                {modalStatus && <div style={{ fontSize: 12, color: "#666" }}>{modalStatus}</div>}
+            <section className="webdav-config-panel">
+              <div className="webdav-config-panel-head">连接配置</div>
+              <div className="backup-form-grid">
+                <label className="webdav-field">
+                  <span>WebDAV 地址</span>
+                  <input className="group-input" placeholder="https://dav.example.com/dav/" value={webdavUrl} onChange={(event) => setWebdavUrl(event.target.value)} />
+                </label>
+                <label className="webdav-field">
+                  <span>账号</span>
+                  <input className="group-input" placeholder="your-account@example.com" value={webdavUsername} onChange={(event) => setWebdavUsername(event.target.value)} />
+                </label>
+                <label className="webdav-field">
+                  <span>密码</span>
+                  <input className="group-input" placeholder="请输入 WebDAV 密码" type="password" value={webdavPassword} onChange={(event) => setWebdavPassword(event.target.value)} />
+                </label>
+                <label className="webdav-field">
+                  <span>备份目录</span>
+                  <input className="group-input" placeholder="opentab/backup.opentab.zip" value={webdavFilePath} onChange={(event) => setWebdavFilePath(event.target.value)} />
+                </label>
+                <label className="webdav-field webdav-field-limit">
+                  <span>备份数量上限</span>
+                  <input
+                    className="group-input"
+                    min="1"
+                    max="100"
+                    placeholder="10"
+                    type="number"
+                    value={webdavBackupLimit}
+                    onChange={(event) => setWebdavBackupLimit(event.target.value)}
+                  />
+                </label>
               </div>
-              <div style={{ flex: 1 }} />
-              <button
-                className="route-text-button"
-                onClick={() => {
-                  setShowWebdavModal(false)
-                }}
-                type="button"
-              >
-                取消
+            </section>
+
+            <div className="backup-modal-toolbar webdav-modal-toolbar">
+              <button className="route-text-button is-primary" onClick={() => void handleSaveSettings()} type="button">
+                保存配置
+              </button>
+              <button className="route-text-button" onClick={() => void handleVerifyConnection()} type="button">
+                检查连接
+              </button>
+              <button className="route-text-button" onClick={() => void handleApplyBackupLimit()} type="button">
+                应用备份数量
+              </button>
+              <button className="route-text-button" onClick={() => void refreshRemoteBackups()} type="button">
+                刷新备份列表
               </button>
             </div>
 
-            <div style={{ marginTop: 16 }}>
-              <h4 style={{ margin: "8px 0" }}>已保存的配置版本</h4>
-              {versions.length === 0 ? <div style={{ color: "#666" }}>还没有保存的版本。</div> : null}
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8, maxHeight: 240, overflow: "auto" }}>
-                {versions.map((ver) => (
-                  <div key={ver.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: 8, border: "1px solid #eee", borderRadius: 6 }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, color: "#333" }}>{new Date(ver.createdAt).toLocaleString()}</div>
-                      <div style={{ fontSize: 13, color: "#111", marginTop: 4 }}>{ver.webdavUrl}</div>
-                      <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>{ver.webdavUsername} · {ver.webdavFilePath}</div>
+            {modalStatus ? (
+              <div className="backup-modal-status webdav-status-banner">
+                <span className="webdav-status-icon">i</span>
+                <span>{modalStatus}</span>
+              </div>
+            ) : null}
+
+            <div className="backup-list-section webdav-list-section">
+              <h4 className="webdav-list-title">远程备份列表</h4>
+              {remoteBackups.length === 0 ? <div className="backup-list-empty">远程目录中还没有可恢复的历史备份。</div> : null}
+              <div className="backup-list">
+                {remoteBackups.map((item) => (
+                  <div key={item.remotePath} className="backup-list-item">
+                    <div className="backup-list-item-main">
+                      <div className="backup-list-item-time">{formatBackupLabel(item)}</div>
+                      <div className="backup-list-item-name">{item.name}</div>
+                      <div className="backup-list-item-path">{item.remotePath}</div>
                     </div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button
-                        className="route-text-button"
-                        onClick={async () => {
-                          try {
-                            // 尝试从远程拉取完整配置
-                            const vDir = resolveWebdavConfigDirectory(ver.webdavFilePath)
-                            const remotePath = `${vDir}/config-${ver.id}-full.json`
-
-                            let fullConfig: WebdavConfigVersion
-
-                            try {
-                              // 尝试从远程拉取完整配置
-                              const content = await downloadFileFromWebdav(remotePath, buildVersionConfig(ver))
-                              fullConfig = JSON.parse(content)
-                              setModalStatus("已从远程加载完整配置。")
-                            } catch (e) {
-                              console.warn("Failed to load full config from remote, using local:", e)
-                              // 远程拉取失败，使用本地配置
-                              fullConfig = ver
-                              setModalStatus("远程拉取失败，已加载本地配置。")
-                            }
-
-                            // restore this version into fields
-                            setWebdavUrl(fullConfig.webdavUrl)
-                            setWebdavUsername(fullConfig.webdavUsername)
-                            setWebdavFilePath(fullConfig.webdavFilePath)
-                          } catch (err) {
-                            console.error(err)
-                            setModalStatus(err instanceof Error ? err.message : "加载失败。")
-                          }
-                        }}
-                        type="button"
-                      >
+                    <div className="backup-list-item-actions">
+                      <button className="route-text-button" onClick={() => void handleRestoreRemoteBackup(item)} type="button">
                         加载
                       </button>
-                      <button
-                        className="route-text-button"
-                        onClick={async () => {
-                          if (!window.confirm("确认删除该配置版本？此操作不可逆。")) return
-                          try {
-                            const dDir = resolveWebdavConfigDirectory(ver.webdavFilePath)
-
-                            // 先删除远程文件
-                            try {
-                              // 删除公开配置文件（不含密码）
-                              const publicPath = `${dDir}/config-${ver.id}.json`
-                              await deleteFileFromWebdav(publicPath, buildVersionConfig(ver))
-                            } catch (e) {
-                              console.warn("Failed to delete public remote config:", e)
-                            }
-
-                            try {
-                              // 删除完整配置文件
-                              const fullPath = `${dDir}/config-${ver.id}-full.json`
-                              await deleteFileFromWebdav(fullPath, buildVersionConfig(ver))
-                            } catch (e) {
-                              console.warn("Failed to delete full remote config:", e)
-                            }
-
-                            // 删除本地配置
-                            await removeWebdavConfigVersion(ver.id)
-                            const vs = await getWebdavConfigVersions()
-                            setVersions(vs)
-
-                            setModalStatus("已删除版本（本地和远程）。")
-                            setStatusMessage("已删除 WebDAV 配置版本（本地和远程）。")
-                          } catch (e) {
-                            console.error(e)
-                            setModalStatus(e instanceof Error ? e.message : "删除失败")
-                          }
-                        }}
-                        type="button"
-                      >
+                      <button className="route-text-button is-danger" onClick={() => void handleDeleteRemoteBackup(item)} type="button">
                         删除
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
+            </div>
+
+            <div className="webdav-modal-footer">
+              <button className="route-text-button webdav-close-button" onClick={() => setShowWebdavModal(false)} type="button">
+                关闭
+              </button>
             </div>
           </div>
         </div>

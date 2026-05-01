@@ -1,13 +1,21 @@
-import { useState, useEffect } from "react"
-import { encryptText, decryptText } from "../../lib/crypto"
+import { useEffect, useState } from "react"
+import { decryptText, encryptText } from "../../lib/crypto"
 import { updateSettings } from "../../services/settings-service"
 import { verifyWebdavConnection } from "../../services/webdav-sync-service"
-import { syncToChrome, syncFromChrome, getChromeSyncStatus } from "../../services/chrome-sync-service"
+import { getChromeSyncStatus, syncFromChrome, syncToChrome } from "../../services/chrome-sync-service"
 import type { AppSettings } from "../../types/settings"
 
 type SyncSettingsPageProps = {
   settings: AppSettings | null
   onUpdated: () => Promise<void> | void
+}
+
+function normalizeBackupLimit(value: string | number) {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) {
+    return 10
+  }
+  return Math.min(100, Math.max(1, Math.floor(parsed)))
 }
 
 export function SyncSettingsPage({ settings, onUpdated }: SyncSettingsPageProps) {
@@ -63,11 +71,7 @@ export function SyncSettingsPage({ settings, onUpdated }: SyncSettingsPageProps)
     setSyncing(true)
     try {
       const result = await syncToChrome()
-      if (result.success) {
-        setStatus("数据已推送到 Chrome 云端。")
-      } else {
-        setStatus(`推送失败：${result.error}`)
-      }
+      setStatus(result.success ? "数据已推送到 Chrome 云端。" : `推送失败：${result.error}`)
       setChromeSyncStatus(await getChromeSyncStatus())
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "推送失败。")
@@ -80,11 +84,7 @@ export function SyncSettingsPage({ settings, onUpdated }: SyncSettingsPageProps)
     setSyncing(true)
     try {
       const result = await syncFromChrome()
-      if (result.success) {
-        setStatus("数据已从 Chrome 云端拉取到本地。")
-      } else {
-        setStatus(`拉取失败：${result.error}`)
-      }
+      setStatus(result.success ? "数据已从 Chrome 云端拉取到本地。" : `拉取失败：${result.error}`)
       await onUpdated()
       setChromeSyncStatus(await getChromeSyncStatus())
     } catch (error) {
@@ -116,28 +116,16 @@ export function SyncSettingsPage({ settings, onUpdated }: SyncSettingsPageProps)
         <div className="options-stack">
           <div>
             <h3>同步提供方</h3>
-            <p>当前可以选择本地存储或 WebDAV，同步不会替代本地数据。</p>
+            <p>当前可以选择本地、Chrome Sync 或 WebDAV，同步不会替代本地数据。</p>
           </div>
           <div className="options-actions">
-            <button
-              className={`options-button${settings?.syncProvider === "local" ? " is-primary" : ""}`}
-              onClick={() => void handleProviderChange("local")}
-              type="button"
-            >
+            <button className={`options-button${settings?.syncProvider === "local" ? " is-primary" : ""}`} onClick={() => void handleProviderChange("local")} type="button">
               本地
             </button>
-            <button
-              className={`options-button${settings?.syncProvider === "chrome-sync" ? " is-primary" : ""}`}
-              onClick={() => void handleProviderChange("chrome-sync")}
-              type="button"
-            >
+            <button className={`options-button${settings?.syncProvider === "chrome-sync" ? " is-primary" : ""}`} onClick={() => void handleProviderChange("chrome-sync")} type="button">
               Chrome Sync
             </button>
-            <button
-              className={`options-button${settings?.syncProvider === "webdav" ? " is-primary" : ""}`}
-              onClick={() => void handleProviderChange("webdav")}
-              type="button"
-            >
+            <button className={`options-button${settings?.syncProvider === "webdav" ? " is-primary" : ""}`} onClick={() => void handleProviderChange("webdav")} type="button">
               WebDAV
             </button>
           </div>
@@ -146,31 +134,17 @@ export function SyncSettingsPage({ settings, onUpdated }: SyncSettingsPageProps)
         <div className="options-stack">
           <div>
             <h3>Chrome Storage Sync</h3>
-            <p>通过 Chrome 账号同步数据到云端，数据上限 80KB，适合少量路由同步。</p>
+            <p>通过 Chrome 账号同步数据到云端，适合少量数据跨设备同步。</p>
           </div>
           <div className="options-info-row">
-            <span>
-              上次同步：{chromeSyncStatus.lastSynced ? new Date(chromeSyncStatus.lastSynced).toLocaleString() : "从未同步"}
-            </span>
-            <span>
-              数据大小：{chromeSyncStatus.dataSize > 0 ? `${(chromeSyncStatus.dataSize / 1024).toFixed(1)}KB` : "无数据"}
-            </span>
+            <span>上次同步：{chromeSyncStatus.lastSynced ? new Date(chromeSyncStatus.lastSynced).toLocaleString() : "从未同步"}</span>
+            <span>数据大小：{chromeSyncStatus.dataSize > 0 ? `${(chromeSyncStatus.dataSize / 1024).toFixed(1)}KB` : "无数据"}</span>
           </div>
           <div className="options-actions">
-            <button
-              className="options-button is-primary"
-              disabled={syncing}
-              onClick={handleSyncToChrome}
-              type="button"
-            >
+            <button className="options-button is-primary" disabled={syncing} onClick={handleSyncToChrome} type="button">
               {syncing ? "同步中..." : "推送数据到云端"}
             </button>
-            <button
-              className="options-button"
-              disabled={syncing}
-              onClick={handleSyncFromChrome}
-              type="button"
-            >
+            <button className="options-button" disabled={syncing} onClick={handleSyncFromChrome} type="button">
               {syncing ? "同步中..." : "从云端拉取"}
             </button>
           </div>
@@ -179,7 +153,7 @@ export function SyncSettingsPage({ settings, onUpdated }: SyncSettingsPageProps)
         <div className="options-stack">
           <div>
             <h3>WebDAV 配置</h3>
-            <p>填写你的 WebDAV 地址、账号和备份路径，供手动上传和下载使用。</p>
+            <p>填写你的 WebDAV 地址、账号、密码、备份路径和配置备份数量上限。备份路径也可以只填目录。</p>
           </div>
           <input
             className="group-input"
@@ -209,6 +183,15 @@ export function SyncSettingsPage({ settings, onUpdated }: SyncSettingsPageProps)
             onChange={(event) => void handleFieldChange("webdavFilePath", event.target.value)}
             placeholder="opentab/backup.opentab.zip"
             value={settings?.webdavFilePath ?? ""}
+          />
+          <input
+            className="group-input"
+            min="1"
+            max="100"
+            onChange={(event) => void handleFieldChange("webdavBackupLimit", normalizeBackupLimit(event.target.value))}
+            placeholder="10"
+            type="number"
+            value={settings?.webdavBackupLimit ?? 10}
           />
           <div className="options-actions">
             <button className="options-button" onClick={handleVerifyWebdav} type="button">

@@ -1,4 +1,10 @@
 import { useRef, useState, type ChangeEvent } from "react"
+import {
+  formatWebdavDownloadMessage,
+  formatWebdavRefreshMessage,
+  formatWebdavUploadMessage,
+  getBackupStatusIntro
+} from "../../lib/backup-ui"
 import { createBackupFilename, decodeBackup, encodeBackup } from "../../lib/backup"
 import { decryptText, encryptText } from "../../lib/crypto"
 import { getAppBackupArchive, saveAppBackupArchive } from "../../repositories/local-repo"
@@ -12,6 +18,7 @@ import {
   type WebdavBackupItem
 } from "../../services/webdav-sync-service"
 import { loadSettings, updateSettings } from "../../services/settings-service"
+import { useToast } from "../components/ToastProvider"
 
 function downloadBackupFile(filename: string, content: ArrayBuffer) {
   const blob = new Blob([content], { type: "application/zip" })
@@ -40,7 +47,8 @@ function formatBackupLabel(item: WebdavBackupItem) {
 }
 
 export function BackupPage() {
-  const [statusMessage, setStatusMessage] = useState("这里统一管理本地备份和 WebDAV 同步。")
+  const { notify } = useToast()
+  const [statusMessage, setStatusMessage] = useState(getBackupStatusIntro())
   const [syncing, setSyncing] = useState(false)
   const [showWebdavModal, setShowWebdavModal] = useState(false)
   const [webdavUrl, setWebdavUrl] = useState("")
@@ -51,6 +59,22 @@ export function BackupPage() {
   const [modalStatus, setModalStatus] = useState<string | null>(null)
   const [remoteBackups, setRemoteBackups] = useState<WebdavBackupItem[]>([])
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  function showNotice(title: string, message: string, tone: "info" | "success" | "error" = "info", durationMs?: number) {
+    setStatusMessage(message)
+    notify({
+      title,
+      message,
+      tone,
+      durationMs
+    })
+  }
+
+  function showError(error: unknown, fallbackMessage: string, title = "操作失败") {
+    const message = error instanceof Error ? error.message : fallbackMessage
+    showNotice(title, message, "error", 4800)
+    return message
+  }
 
   async function refreshRemoteBackups() {
     const backups = await listWebdavBackups()
@@ -78,7 +102,7 @@ export function BackupPage() {
     const archive = await getAppBackupArchive()
     const encoded = await encodeBackup(archive)
     downloadBackupFile(createBackupFilename(), encoded)
-    setStatusMessage("导出完成，已生成插件完整备份压缩包。")
+    showNotice("导出完成", "已生成插件完整 zip 备份压缩包。", "success")
   }
 
   function handleImportClick() {
@@ -95,11 +119,11 @@ export function BackupPage() {
       const raw = await file.arrayBuffer()
       const archive = await decodeBackup(raw)
       await saveAppBackupArchive(archive)
-      setStatusMessage("导入完成，本地插件数据和个人配置已恢复。")
       event.target.value = ""
+      showNotice("导入完成", "本地插件数据和个人配置已恢复。", "success")
     } catch (error) {
       console.error(error)
-      setStatusMessage(error instanceof Error ? error.message : "导入失败，请检查备份文件是否可用。")
+      showError(error, "导入失败，请检查备份文件是否可用。", "导入失败")
     }
   }
 
@@ -110,11 +134,10 @@ export function BackupPage() {
       if (showWebdavModal) {
         await refreshRemoteBackups()
       }
-      const replacedMessage = result.replaced ? "，已覆盖最旧的一条远程备份并更新时间" : ""
-      setStatusMessage(`上传完成，当前本地数据已同步到 WebDAV${replacedMessage}。`)
+      showNotice("上传完成", formatWebdavUploadMessage(Boolean(result.replaced)), "success")
     } catch (error) {
       console.error(error)
-      setStatusMessage(error instanceof Error ? error.message : "上传失败，请检查 WebDAV 配置。")
+      showError(error, "上传失败，请检查 WebDAV 配置。", "上传失败")
     } finally {
       setSyncing(false)
     }
@@ -124,10 +147,10 @@ export function BackupPage() {
     setSyncing(true)
     try {
       const result = await downloadSnapshotFromWebdav()
-      setStatusMessage(`下载完成，已从 ${result.sourcePath} 恢复最新远程备份。`)
+      showNotice("下载完成", formatWebdavDownloadMessage(result.sourcePath), "success")
     } catch (error) {
       console.error(error)
-      setStatusMessage(error instanceof Error ? error.message : "下载失败，请检查 WebDAV 配置。")
+      showError(error, "下载失败，请检查 WebDAV 配置。", "下载失败")
     } finally {
       setSyncing(false)
     }
@@ -159,11 +182,12 @@ export function BackupPage() {
   async function handleSaveSettings() {
     try {
       await saveCurrentSettings()
-      setModalStatus("WebDAV 配置已保存。")
-      setStatusMessage("WebDAV 配置已保存。")
+      const message = "WebDAV 配置已保存。"
+      setModalStatus(message)
+      showNotice("保存成功", message, "success")
     } catch (error) {
       console.error(error)
-      setModalStatus(error instanceof Error ? error.message : "保存失败。")
+      setModalStatus(showError(error, "保存失败。", "保存失败"))
     }
   }
 
@@ -172,13 +196,12 @@ export function BackupPage() {
       setModalStatus("正在检查 WebDAV 连接...")
       await saveCurrentSettings()
       await verifyWebdavConnection()
-      setModalStatus("WebDAV 连接检查通过。")
-      setStatusMessage("WebDAV 连接检查通过。")
+      const message = "WebDAV 连接检查通过。"
+      setModalStatus(message)
+      showNotice("连接正常", message, "success")
     } catch (error) {
       console.error(error)
-      const message = error instanceof Error ? error.message : "连接检查失败。"
-      setModalStatus(message)
-      setStatusMessage(message)
+      setModalStatus(showError(error, "连接检查失败。", "连接失败"))
     }
   }
 
@@ -187,42 +210,56 @@ export function BackupPage() {
       const { limit } = await saveCurrentSettings()
       const { removed } = await enforceWebdavBackupLimit()
       const backups = await refreshRemoteBackups()
-      setModalStatus(
+      const detail =
         removed.length > 0
           ? `备份数量已限制为 ${limit}，并清理了 ${removed.length} 条旧备份，当前剩余 ${backups.length} 条。`
-          : `备份数量已更新为 ${limit}。`
-      )
-      setStatusMessage("WebDAV 备份数量设置已生效。")
+          : `备份数量已更新为 ${limit}，当前共有 ${backups.length} 条远程备份。`
+      setModalStatus(detail)
+      showNotice("数量已更新", "WebDAV 备份数量设置已生效。", "success")
     } catch (error) {
       console.error(error)
-      setModalStatus(error instanceof Error ? error.message : "更新备份数量失败。")
+      setModalStatus(showError(error, "更新备份数量失败。", "更新失败"))
+    }
+  }
+
+  async function handleRefreshBackups() {
+    try {
+      const backups = await refreshRemoteBackups()
+      const message = formatWebdavRefreshMessage(backups.length)
+      setModalStatus(message)
+      showNotice("列表已刷新", message, "success")
+    } catch (error) {
+      console.error(error)
+      setModalStatus(showError(error, "远程备份列表加载失败。", "刷新失败"))
     }
   }
 
   async function handleRestoreRemoteBackup(item: WebdavBackupItem) {
     try {
       await downloadSnapshotFromWebdav(item.remotePath)
-      setModalStatus(`已恢复远程备份 ${item.name}。`)
-      setStatusMessage(`已从 WebDAV 恢复备份 ${item.name}。`)
+      const detail = `已恢复远程备份 ${item.name}。`
+      setModalStatus(detail)
+      showNotice("恢复完成", `已从 WebDAV 恢复备份 ${item.name}。`, "success")
     } catch (error) {
       console.error(error)
-      setModalStatus(error instanceof Error ? error.message : "恢复失败。")
+      setModalStatus(showError(error, "恢复失败。", "恢复失败"))
     }
   }
 
   async function handleDeleteRemoteBackup(item: WebdavBackupItem) {
-    if (!window.confirm(`确认删除远程备份 ${item.name}？此操作不可逆。`)) {
+    if (!window.confirm(`确认删除远程备份 ${item.name}？此操作不可撤销。`)) {
       return
     }
 
     try {
       await deleteWebdavBackup(item.remotePath)
       await refreshRemoteBackups()
-      setModalStatus(`已删除远程备份 ${item.name}。`)
-      setStatusMessage(`已删除 WebDAV 远程备份 ${item.name}。`)
+      const detail = `已删除远程备份 ${item.name}。`
+      setModalStatus(detail)
+      showNotice("删除完成", `已删除 WebDAV 远程备份 ${item.name}。`, "success")
     } catch (error) {
       console.error(error)
-      setModalStatus(error instanceof Error ? error.message : "删除失败。")
+      setModalStatus(showError(error, "删除失败。", "删除失败"))
     }
   }
 
@@ -288,11 +325,11 @@ export function BackupPage() {
               <button className="route-text-button is-primary" disabled={syncing} onClick={handleUploadToWebdav} type="button">
                 上传到 WebDAV
               </button>
-              <button className="route-text-button" disabled={syncing} onClick={() => void openWebdavModal()} type="button">
-                配置 WebDAV
-              </button>
               <button className="route-text-button" disabled={syncing} onClick={handleDownloadFromWebdav} type="button">
                 从 WebDAV 下载
+              </button>
+              <button className="route-text-button" disabled={syncing} onClick={() => void openWebdavModal()} type="button">
+                配置 WebDAV
               </button>
             </div>
           </div>
@@ -372,7 +409,7 @@ export function BackupPage() {
               <button className="route-text-button" onClick={() => void handleApplyBackupLimit()} type="button">
                 应用备份数量
               </button>
-              <button className="route-text-button" onClick={() => void refreshRemoteBackups()} type="button">
+              <button className="route-text-button" onClick={() => void handleRefreshBackups()} type="button">
                 刷新备份列表
               </button>
             </div>

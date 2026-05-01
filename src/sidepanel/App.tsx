@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { loadSettings, updateSettings } from "../services/settings-service"
 import type { AppSettings } from "../types/settings"
 import { Sidebar, type SidepanelView } from "./components/Sidebar"
+import { ToastProvider } from "./components/ToastProvider"
 import { AllRoutesPage } from "./pages/AllRoutesPage"
 import { BackupPage } from "./pages/BackupPage"
 import { DashboardPage } from "./pages/DashboardPage"
@@ -30,36 +31,38 @@ export function App() {
   const collapsedGroupIds = settings?.collapsedGroupIds || []
 
   return (
-    <main className="sidepanel-layout">
-      <Sidebar activeView={activeView} onChange={setActiveView} />
-      <section className="sidepanel-content">
-        {activeView === "all-routes" ? <AllRoutesPage viewMode={viewMode} onViewModeChange={handleViewModeChange} /> : null}
-        {activeView === "recent-visits" ? <RecentVisitsPage /> : null}
-        {activeView === "groups" ? (
-          <DashboardPage
-            collapsedGroupIds={collapsedGroupIds}
-            onCollapsedGroupIdsChange={handleCollapsedGroupIdsChange}
-            viewMode={viewMode}
-            onViewModeChange={handleViewModeChange}
-          />
-        ) : null}
-        {activeView === "tags" ? <TagsPage /> : null}
-        {activeView === "backup" ? <BackupPage /> : null}
-        {activeView !== "all-routes" &&
-        activeView !== "recent-visits" &&
-        activeView !== "groups" &&
-        activeView !== "tags" &&
-        activeView !== "backup" ? (
-          <section className="surface group-section">
-            <div className="section-head">
-              <div>
-                <h3>开发中</h3>
-                <p>这个页面下一步就接上。</p>
+    <ToastProvider>
+      <main className="sidepanel-layout">
+        <Sidebar activeView={activeView} onChange={setActiveView} />
+        <section className="sidepanel-content">
+          {activeView === "all-routes" ? <AllRoutesPage viewMode={viewMode} onViewModeChange={handleViewModeChange} /> : null}
+          {activeView === "recent-visits" ? <RecentVisitsPage /> : null}
+          {activeView === "groups" ? (
+            <DashboardPage
+              collapsedGroupIds={collapsedGroupIds}
+              onCollapsedGroupIdsChange={handleCollapsedGroupIdsChange}
+              viewMode={viewMode}
+              onViewModeChange={handleViewModeChange}
+            />
+          ) : null}
+          {activeView === "tags" ? <TagsPage /> : null}
+          {activeView === "backup" ? <BackupPage /> : null}
+          {activeView !== "all-routes" &&
+          activeView !== "recent-visits" &&
+          activeView !== "groups" &&
+          activeView !== "tags" &&
+          activeView !== "backup" ? (
+            <section className="surface group-section">
+              <div className="section-head">
+                <div>
+                  <h3>开发中</h3>
+                  <p>这个页面下一步就接上。</p>
+                </div>
               </div>
-            </div>
-          </section>
-        ) : null}
-      </section>
-    </main>
+            </section>
+          ) : null}
+        </section>
+      </main>
+    </ToastProvider>
   )
 }

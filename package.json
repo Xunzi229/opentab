@@ -1,6 +1,6 @@
 {
   "name": "opentab",
-  "version": "0.1.106",
+  "version": "0.1.112",
   "private": true,
   "type": "module",
   "scripts": {

@@ -12,9 +12,7 @@ type SidebarProps = {
 
 const items: Array<{ key: SidepanelView; label: string }> = [
   { key: "all-routes", label: "全部收藏" },
-  { key: "recent-visits", label: "最近访问" },
   { key: "groups", label: "我的分组" },
-  { key: "tags", label: "标签管理" },
   { key: "backup", label: "备份与同步" }
 ]
 

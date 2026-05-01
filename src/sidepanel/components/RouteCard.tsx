@@ -84,15 +84,15 @@ export function RouteCard({
   const displayPath = useMemo(() => toDisplayRouteText(path, url), [path, url])
   const faviconUrl = useMemo(() => toFaviconUrl(url, icon), [icon, url])
 
-  function handleDragStart(e: React.DragEvent) {
-    e.dataTransfer.setData("application/opentab-route", JSON.stringify({ routeId: id, groupId }))
-    e.dataTransfer.effectAllowed = "move"
+  function handleDragStart(event: React.DragEvent) {
+    event.dataTransfer.setData("application/opentab-route", JSON.stringify({ routeId: id, groupId }))
+    event.dataTransfer.effectAllowed = "move"
   }
 
-  function handleDragOver(e: React.DragEvent) {
-    if (e.dataTransfer.types.includes("application/opentab-route")) {
-      e.preventDefault()
-      e.dataTransfer.dropEffect = "move"
+  function handleDragOver(event: React.DragEvent) {
+    if (event.dataTransfer.types.includes("application/opentab-route")) {
+      event.preventDefault()
+      event.dataTransfer.dropEffect = "move"
       setDragOver(true)
     }
   }
@@ -101,10 +101,10 @@ export function RouteCard({
     setDragOver(false)
   }
 
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault()
+  function handleDrop(event: React.DragEvent) {
+    event.preventDefault()
     setDragOver(false)
-    const raw = e.dataTransfer.getData("application/opentab-route")
+    const raw = event.dataTransfer.getData("application/opentab-route")
     if (!raw || !onDropRoute) return
     try {
       const { routeId: draggedRouteId } = JSON.parse(raw) as { routeId: string; groupId: string }
@@ -144,41 +144,22 @@ export function RouteCard({
     <article
       className={`route-row${dragOver ? " drag-over" : ""}`}
       draggable
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDragStart={handleDragStart}
       onDrop={handleDrop}
     >
       <div className="route-row-main">
         {isEditing ? (
           <div className="route-edit-grid">
-            <input
-              className="group-input"
-              onChange={(event) => setDraftTitle(event.target.value)}
-              placeholder="名称"
-              value={draftTitle}
-            />
-            <input
-              className="group-input"
-              onChange={(event) => setDraftUrl(event.target.value)}
-              placeholder="https://example.com/path"
-              value={draftUrl}
-            />
-            <input
-              className="group-input"
-              onChange={(event) => setDraftNote(event.target.value)}
-              placeholder="备注（可选）"
-              value={draftNote}
-            />
-            <input
-              className="group-input"
-              onChange={(event) => setDraftTags(event.target.value)}
-              placeholder="标签，多个用逗号分隔"
-              value={draftTags}
-            />
+            <input className="group-input" onChange={(event) => setDraftTitle(event.target.value)} placeholder="名称" value={draftTitle} />
+            <input className="group-input" onChange={(event) => setDraftUrl(event.target.value)} placeholder="https://example.com/path" value={draftUrl} />
+            <input className="group-input" onChange={(event) => setDraftNote(event.target.value)} placeholder="备注（可选）" value={draftNote} />
+            <input className="group-input" onChange={(event) => setDraftTags(event.target.value)} placeholder="标签，多个用逗号分隔" value={draftTags} />
+
             <div className="edit-field">
               <label>HTTP 方法</label>
-              <select value={editHttpMethod} onChange={e => setEditHttpMethod(e.target.value)}>
+              <select value={editHttpMethod} onChange={(event) => setEditHttpMethod(event.target.value)}>
                 <option value="GET">GET</option>
                 <option value="POST">POST</option>
                 <option value="PUT">PUT</option>
@@ -186,20 +167,46 @@ export function RouteCard({
                 <option value="PATCH">PATCH</option>
               </select>
             </div>
+
             <div className="edit-field">
               <label>代码仓库</label>
-              <input value={editRepoUrl} onChange={e => setEditRepoUrl(e.target.value)} placeholder="https://github.com/..." />
+              <input placeholder="https://github.com/..." value={editRepoUrl} onChange={(event) => setEditRepoUrl(event.target.value)} />
             </div>
+
             <div className="edit-field">
               <label>环境配置</label>
-              {editEnvironments.map((env, i) => (
-                <div key={i} className="env-edit-row">
-                  <input value={env.name} placeholder="名称" onChange={e => { const next = [...editEnvironments]; next[i] = { ...next[i], name: e.target.value }; setEditEnvironments(next) }} />
-                  <input value={env.url} placeholder="URL" onChange={e => { const next = [...editEnvironments]; next[i] = { ...next[i], url: e.target.value }; setEditEnvironments(next) }} />
-                  <button className="remove-env-btn" onClick={() => setEditEnvironments(editEnvironments.filter((_, j) => j !== i))} type="button">x</button>
+              {editEnvironments.map((env, index) => (
+                <div key={`${env.name}-${index}`} className="env-edit-row">
+                  <input
+                    value={env.name}
+                    placeholder="名称"
+                    onChange={(event) => {
+                      const next = [...editEnvironments]
+                      next[index] = { ...next[index], name: event.target.value }
+                      setEditEnvironments(next)
+                    }}
+                  />
+                  <input
+                    value={env.url}
+                    placeholder="URL"
+                    onChange={(event) => {
+                      const next = [...editEnvironments]
+                      next[index] = { ...next[index], url: event.target.value }
+                      setEditEnvironments(next)
+                    }}
+                  />
+                  <button
+                    className="remove-env-btn"
+                    onClick={() => setEditEnvironments(editEnvironments.filter((_, envIndex) => envIndex !== index))}
+                    type="button"
+                  >
+                    x
+                  </button>
                 </div>
               ))}
-              <button className="add-env-btn" onClick={() => setEditEnvironments([...editEnvironments, { name: "", url: "" }])} type="button">+ 添加环境</button>
+              <button className="add-env-btn" onClick={() => setEditEnvironments([...editEnvironments, { name: "", url: "" }])} type="button">
+                + 添加环境
+              </button>
             </div>
           </div>
         ) : (
@@ -215,14 +222,14 @@ export function RouteCard({
             {note ? <span className="route-row-note" title={note}>{note}</span> : null}
             {tags.length > 0 ? <span className="route-row-note" title={tags.join(", ")}>#{tags.join(" #")}</span> : null}
             {starred ? <span className="route-badge">已星标</span> : null}
-            {environments && environments.length > 0 && (
+            {environments?.length ? (
               <div className="env-tags">
-                {environments.map(env => (
+                {environments.map((env) => (
                   <button
                     key={env.name}
                     className={`env-tag${env.name === activeEnv ? " active" : ""}`}
-                    onClick={(e) => {
-                      e.stopPropagation()
+                    onClick={(event) => {
+                      event.stopPropagation()
                       onEnvChange?.(id, env.name)
                     }}
                     title={env.url}
@@ -232,84 +239,78 @@ export function RouteCard({
                   </button>
                 ))}
               </div>
-            )}
+            ) : null}
           </div>
         )}
       </div>
+
       <div className="route-row-actions">
         <button
           className={`route-icon-button${starred ? " is-starred" : ""}`}
           onClick={() => onToggleStar(id)}
-          type="button"
           title={starred ? "取消星标" : "设为星标"}
+          type="button"
         >
-          {starred ? "★" : "☆"}
+          {starred ? "*" : "+"}
         </button>
-        <select
-          className="route-select"
-          onChange={(event) => onMoveGroup(id, event.target.value)}
-          value={groupId}
-        >
+
+        <select className="route-select" onChange={(event) => onMoveGroup(id, event.target.value)} value={groupId}>
           {groups.map((group) => (
             <option key={group.id} value={group.id}>
               {group.name}
             </option>
           ))}
         </select>
+
         <button
           className="route-action-btn dev-btn"
+          onClick={() => void navigator.clipboard.writeText(toCurl(url, httpMethod, headers))}
           title="复制 cURL"
-          onClick={(e) => {
-            e.stopPropagation()
-            const curl = toCurl(url, httpMethod, headers)
-            void navigator.clipboard.writeText(curl)
-          }}
           type="button"
         >
           {"{}"}
         </button>
         <button
           className="route-action-btn dev-btn"
+          onClick={() => void navigator.clipboard.writeText(toFetch(url, httpMethod, headers))}
           title="复制 fetch"
-          onClick={(e) => {
-            e.stopPropagation()
-            const code = toFetch(url, httpMethod, headers)
-            void navigator.clipboard.writeText(code)
-          }}
           type="button"
         >
           fn
         </button>
-        {repoUrl && (
+
+        {repoUrl ? (
           <a
             className="route-action-btn dev-btn"
             href={repoUrl}
-            target="_blank"
+            onClick={(event) => event.stopPropagation()}
             rel="noopener noreferrer"
+            target="_blank"
             title={`仓库: ${toRepoDisplayName(repoUrl)}`}
-            onClick={e => e.stopPropagation()}
           >
             {"</>"}
           </a>
-        )}
+        ) : null}
+
         {isEditing ? (
           <>
-            <button className="route-text-button is-primary" onClick={handleSaveEdit} type="button">
+            <button className="route-text-button is-primary button-pill" onClick={() => void handleSaveEdit()} type="button">
               保存
             </button>
-            <button className="route-text-button" onClick={handleCancelEdit} type="button">
+            <button className="route-text-button button-pill" onClick={handleCancelEdit} type="button">
               取消
             </button>
           </>
         ) : (
-          <button className="route-text-button" onClick={() => setIsEditing(true)} type="button">
+          <button className="route-text-button button-pill" onClick={() => setIsEditing(true)} type="button">
             编辑
           </button>
         )}
-        <button className="route-text-button restore-btn" onClick={() => onRestore(url)} type="button">
+
+        <button className="route-text-button restore-btn button-pill" onClick={() => onRestore(url)} type="button">
           恢复
         </button>
-        <button className="route-text-button is-danger" onClick={() => onDelete(id)} type="button">
+        <button className="route-text-button is-danger button-pill" onClick={() => onDelete(id)} type="button">
           删除
         </button>
       </div>

@@ -26,7 +26,7 @@ export function DashboardPage({ collapsedGroupIds, onCollapsedGroupIdsChange, vi
   const [newGroupName, setNewGroupName] = useState("")
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null)
   const [editingGroupName, setEditingGroupName] = useState("")
-  const [statusMessage, setStatusMessage] = useState("你可以在这里管理分组、路由和最近访问。")
+  const [statusMessage, setStatusMessage] = useState("你可以在这里管理分组、路由和最近访问记录。")
   const [groups, setGroups] = useState<GroupedRoutes>([])
   const [visits, setVisits] = useState<VisitRecord[]>([])
   const [dragGroupOverId, setDragGroupOverId] = useState<string | null>(null)
@@ -41,10 +41,7 @@ export function DashboardPage({ collapsedGroupIds, onCollapsedGroupIdsChange, vi
     void loadData()
 
     const listener: Parameters<typeof chrome.storage.onChanged.addListener>[0] = (changes, areaName) => {
-      if (areaName !== "local") {
-        return
-      }
-
+      if (areaName !== "local") return
       if (changes[STORAGE_KEYS.routes] || changes[STORAGE_KEYS.groups] || changes[STORAGE_KEYS.visits]) {
         void loadData()
       }
@@ -56,9 +53,7 @@ export function DashboardPage({ collapsedGroupIds, onCollapsedGroupIdsChange, vi
 
   const filteredGroups = useMemo(() => {
     const keyword = searchText.trim().toLowerCase()
-    if (!keyword) {
-      return groups
-    }
+    if (!keyword) return groups
 
     return groups
       .map((group) => {
@@ -82,11 +77,7 @@ export function DashboardPage({ collapsedGroupIds, onCollapsedGroupIdsChange, vi
   }, [groups, searchText])
 
   const groupOptions = useMemo(
-    () =>
-      groups.map((group) => ({
-        id: group.id,
-        name: group.name
-      })),
+    () => groups.map((group) => ({ id: group.id, name: group.name })),
     [groups]
   )
 
@@ -163,7 +154,10 @@ export function DashboardPage({ collapsedGroupIds, onCollapsedGroupIdsChange, vi
     setStatusMessage("路由分组已更新。")
   }
 
-  async function handleEditRoute(routeId: string, input: { title: string; url: string; note?: string; tags?: string; httpMethod?: string; repoUrl?: string; environments?: import("../../types/route").Environment[] }) {
+  async function handleEditRoute(
+    routeId: string,
+    input: { title: string; url: string; note?: string; tags?: string; httpMethod?: string; repoUrl?: string; environments?: import("../../types/route").Environment[] }
+  ) {
     try {
       await updateRoute(routeId, input)
       setStatusMessage("路由已更新。")
@@ -175,16 +169,12 @@ export function DashboardPage({ collapsedGroupIds, onCollapsedGroupIdsChange, vi
   async function handleOpenAllRoutes(urls: string[]) {
     const validUrls = urls.filter(Boolean)
     await Promise.all(validUrls.map((url, index) => chrome.tabs.create({ url, active: index === 0 })))
-    setStatusMessage(`已批量打开 ${validUrls.length} 个地址。`)
+    setStatusMessage(`已批量打开 ${validUrls.length} 个网址。`)
   }
 
   async function handleAddRoute(groupId: string, url: string) {
     try {
-      await saveRoute({
-        title: "",
-        url,
-        groupId
-      })
+      await saveRoute({ title: "", url, groupId })
       setStatusMessage("网址已添加到当前分组。")
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "手动添加网址失败。")
@@ -223,8 +213,7 @@ export function DashboardPage({ collapsedGroupIds, onCollapsedGroupIdsChange, vi
   }
 
   async function handleEnvChange(routeId: string, envName: string) {
-    const allItems = groups.flatMap((group) => group.items)
-    const route = allItems.find((item) => item.id === routeId)
+    const route = groups.flatMap((group) => group.items).find((item) => item.id === routeId)
     if (!route) return
     await updateRoute(routeId, { title: route.title, url: route.url, activeEnv: envName })
     setStatusMessage(`环境已切换到 ${envName}。`)
@@ -240,11 +229,9 @@ export function DashboardPage({ collapsedGroupIds, onCollapsedGroupIdsChange, vi
       const toIndex = orderedIds.indexOf(targetRouteId)
 
       if (fromIndex === -1) {
-        // dragged route is from another group — move it into this group first
         await moveRouteToGroup(draggedRouteId, targetGroup.id)
-        // reload to get updated item list
         const refreshed = await getGroupedRoutes()
-        const refreshedGroup = refreshed.find((g) => g.id === targetGroup.id)
+        const refreshedGroup = refreshed.find((group) => group.id === targetGroup.id)
         if (!refreshedGroup) return
         const ids = refreshedGroup.items.map((item) => item.id)
         const targetIdx = ids.indexOf(targetRouteId)
@@ -266,15 +253,15 @@ export function DashboardPage({ collapsedGroupIds, onCollapsedGroupIdsChange, vi
     }
   }
 
-  function handleGroupDragStart(e: React.DragEvent, groupId: string) {
-    e.dataTransfer.setData("application/opentab-group", groupId)
-    e.dataTransfer.effectAllowed = "move"
+  function handleGroupDragStart(event: React.DragEvent, groupId: string) {
+    event.dataTransfer.setData("application/opentab-group", groupId)
+    event.dataTransfer.effectAllowed = "move"
   }
 
-  function handleGroupDragOver(e: React.DragEvent, groupId: string) {
-    if (e.dataTransfer.types.includes("application/opentab-group")) {
-      e.preventDefault()
-      e.dataTransfer.dropEffect = "move"
+  function handleGroupDragOver(event: React.DragEvent, groupId: string) {
+    if (event.dataTransfer.types.includes("application/opentab-group")) {
+      event.preventDefault()
+      event.dataTransfer.dropEffect = "move"
       setDragGroupOverId(groupId)
     }
   }
@@ -283,10 +270,10 @@ export function DashboardPage({ collapsedGroupIds, onCollapsedGroupIdsChange, vi
     setDragGroupOverId(null)
   }
 
-  async function handleGroupDrop(e: React.DragEvent, targetGroupId: string) {
-    e.preventDefault()
+  async function handleGroupDrop(event: React.DragEvent, targetGroupId: string) {
+    event.preventDefault()
     setDragGroupOverId(null)
-    const draggedGroupId = e.dataTransfer.getData("application/opentab-group")
+    const draggedGroupId = event.dataTransfer.getData("application/opentab-group")
     if (!draggedGroupId || draggedGroupId === targetGroupId) return
 
     try {
@@ -309,47 +296,49 @@ export function DashboardPage({ collapsedGroupIds, onCollapsedGroupIdsChange, vi
   }
 
   return (
-    <section className="page-stack">
-      <HeroBanner />
-      <header className="dashboard-head">
+    <section className="page-stack groups-page">
+      <HeroBanner title="我的分组" description="把工作区按分组排成更清晰的工作台，快速收起、恢复、整理和分享常用网址。" />
+
+      <header className="dashboard-head groups-page-head">
         <div>
           <h3>我的分组</h3>
-          <p>这里使用更紧凑的一行式列表管理收藏，方便高频查看和快速操作。</p>
+          <p>这里使用更紧凑的工作台列表管理收藏，方便高频查看和快速操作。</p>
         </div>
         <div className="dashboard-toolbar">
           <SearchBar value={searchText} onChange={setSearchText} />
           <ViewToggle mode={viewMode} onChange={onViewModeChange} />
-          <button className="route-text-button send-all-tabs-btn" onClick={handleSendAllTabs} type="button">
+          <button className="route-text-button send-all-tabs-btn button-pill" onClick={handleSendAllTabs} type="button">
             收起所有标签
           </button>
         </div>
       </header>
-      <section className="surface group-section">
-        <div className="section-head">
+
+      <section className="surface group-section groups-manage-card">
+        <div className="section-head groups-manage-head">
           <div>
             <h3>分组管理</h3>
-            <p>分组名称必须唯一。你可以在这里创建分组，并把路由移动到更合适的位置。</p>
+            <p>分组名称必须唯一。你可以在这里创建新分组，并把路由移动到更合适的位置。</p>
           </div>
+          <span className="groups-status-chip">{statusMessage}</span>
         </div>
-        <div className="group-create-row">
+        <div className="group-create-row groups-manage-row">
           <input
             className="group-input"
             onChange={(event) => setNewGroupName(event.target.value)}
             placeholder="输入新的分组名称"
             value={newGroupName}
           />
-          <button className="route-text-button is-primary" onClick={handleCreateGroup} type="button">
+          <button className="route-text-button is-primary button-pill" onClick={handleCreateGroup} type="button">
             新建分组
           </button>
         </div>
-        <p className="dashboard-status">{statusMessage}</p>
       </section>
+
       {groups.length === 0 ? (
         <section className="surface group-section">
           <div className="empty-guide">
             <h3>欢迎使用 OpenTab</h3>
-            <p>开始收藏你的第一个路由吧</p>
-            <p>提示：点击上方"收起所有标签"可以快速保存当前打开的标签页</p>
+            <p>先创建一个分组，或者点击上方“收起所有标签”把当前工作区快速保存下来。</p>
           </div>
         </section>
       ) : filteredGroups.length === 0 ? (
@@ -357,57 +346,60 @@ export function DashboardPage({ collapsedGroupIds, onCollapsedGroupIdsChange, vi
           <div className="section-head">
             <div>
               <h3>没有匹配的收藏</h3>
-              <p>换个关键词试试。</p>
+              <p>换个关键词再试试，或者清空搜索条件。</p>
             </div>
           </div>
         </section>
       ) : (
-        filteredGroups.map((group) => (
-          <div
-            className={`group-section-wrapper${dragGroupOverId === group.id ? " group-drag-over" : ""}`}
-            draggable
-            key={group.id}
-            onDragLeave={handleGroupDragLeave}
-            onDragOver={(e) => handleGroupDragOver(e, group.id)}
-            onDragStart={(e) => handleGroupDragStart(e, group.id)}
-            onDrop={(e) => void handleGroupDrop(e, group.id)}
-          >
-            <GroupSection
-              description={`${group.count} 条路由`}
-              editingName={editingGroupName}
-              groups={groupOptions}
-              id={group.id}
-              isCollapsed={isGroupCollapsed(collapsedGroupIds, group.id)}
-              isDefault={group.id === DEFAULT_GROUP_ID}
-              isEditing={editingGroupId === group.id}
-              isLocked={group.isLocked}
-              items={group.items}
-              onAddRoute={handleAddRoute}
-              onCancelEdit={handleCancelEdit}
-              onDeleteAllRoutes={handleDeleteAllRoutes}
-              onDeleteGroup={handleDeleteGroup}
-              onDeleteRoute={handleDeleteRoute}
-              onDropRoute={handleDropRoute}
-              onEditRoute={handleEditRoute}
-              onEnvChange={handleEnvChange}
-              onEditingNameChange={setEditingGroupName}
-              onMoveRouteGroup={handleMoveRouteGroup}
-              onOpenAllRoutes={handleOpenAllRoutes}
-              onRestoreAllRoutes={handleRestoreAllRoutes}
-              onRestoreRoute={handleRestoreRoute}
-              onSaveEdit={handleSaveEdit}
-              onStartEdit={handleStartEdit}
-              onToggleCollapsed={handleToggleGroupCollapse}
-              onToggleLock={handleToggleLock}
-              onTogglePin={handleTogglePin}
-              onToggleStar={handleToggleStar}
-              pinned={group.pinned}
-              title={group.name}
-              viewMode={viewMode}
-            />
-          </div>
-        ))
+        <div className="groups-workbench-list">
+          {filteredGroups.map((group) => (
+            <div
+              className={`group-section-wrapper${dragGroupOverId === group.id ? " group-drag-over" : ""}`}
+              draggable
+              key={group.id}
+              onDragLeave={handleGroupDragLeave}
+              onDragOver={(event) => handleGroupDragOver(event, group.id)}
+              onDragStart={(event) => handleGroupDragStart(event, group.id)}
+              onDrop={(event) => void handleGroupDrop(event, group.id)}
+            >
+              <GroupSection
+                editingName={editingGroupName}
+                groups={groupOptions}
+                id={group.id}
+                isCollapsed={isGroupCollapsed(collapsedGroupIds, group.id)}
+                isDefault={group.id === DEFAULT_GROUP_ID}
+                isEditing={editingGroupId === group.id}
+                isLocked={group.isLocked}
+                items={group.items}
+                onAddRoute={handleAddRoute}
+                onCancelEdit={handleCancelEdit}
+                onDeleteAllRoutes={handleDeleteAllRoutes}
+                onDeleteGroup={handleDeleteGroup}
+                onDeleteRoute={handleDeleteRoute}
+                onDropRoute={handleDropRoute}
+                onEditRoute={handleEditRoute}
+                onEnvChange={handleEnvChange}
+                onEditingNameChange={setEditingGroupName}
+                onMoveRouteGroup={handleMoveRouteGroup}
+                onOpenAllRoutes={handleOpenAllRoutes}
+                onRestoreAllRoutes={handleRestoreAllRoutes}
+                onRestoreRoute={handleRestoreRoute}
+                onSaveEdit={handleSaveEdit}
+                onStartEdit={handleStartEdit}
+                onToggleCollapsed={handleToggleGroupCollapse}
+                onToggleLock={handleToggleLock}
+                onTogglePin={handleTogglePin}
+                onToggleStar={handleToggleStar}
+                pinned={group.pinned}
+                routeCount={group.count}
+                title={group.name}
+                viewMode={viewMode}
+              />
+            </div>
+          ))}
+        </div>
       )}
+
       <RecentTable rows={visits} />
     </section>
   )
